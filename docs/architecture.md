@@ -123,11 +123,19 @@ The fixed Gym roster facts remain in the UI model.
 `GymRecommendationService` in the application layer calculates
 opponent-specific effective move types and deterministic helper rankings. It
 uses the shared `isLetsGoSpecies` domain predicate, which also powers the
-Pokédex scope. Recommendations require a matching move in the bundled data and
-an ID in the controller’s current Caught set; they exclude uncaught,
-out-of-roster, neutral, resisted, and immune choices. `GymGuideScreen` listens
-to the controller so returning from a Collection change refreshes suggestions
-without restarting the app.
+Pokédex scope. Caught recommendations require a matching move in the bundled
+data. Uncaught recommendations additionally require a condition-free
+`overworld` or `overworld-special` record whose reviewed `requiredBadges` value
+is lower than the viewed Gym number. Gifts, trades, traversal methods, static
+or conditioned encounters, and later progression are rejected fail-closed.
+`GymGuideScreen` listens to the controller so returning from a Collection
+change refreshes suggestions without restarting the app.
+
+The independently versioned `assets/guides/lets_go_encounters.json` asset is
+read through `EncounterGuideRepository`. `AdventureController` loads it only
+after core reference and trainer readiness. Load or validation failure exposes
+an empty guide without setting the app error, preserving caught-only guidance
+and offline startup.
 
 `AdventureController` owns a per-species pending-write set for collection
 changes. Screens route favorite, status, and automatic Seen writes through one

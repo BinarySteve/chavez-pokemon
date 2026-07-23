@@ -13,8 +13,8 @@ getting kid-friendly help with **Pokémon: Let’s Go, Pikachu!** and
 - base stats, abilities, types, descriptions, height, and weight
 - kid-friendly strength, weakness, resistance, and immunity guidance
 - All Pokémon and Let’s Go Pokédex scopes
-- all eight Let’s Go story Gym teams with opponent-specific,
-  collection-aware move guidance
+- all eight Let’s Go story Gym teams with opponent-specific caught helpers and
+  pre-Gym walking encounter suggestions
 - local trainer profile, favorites, Seen, Caught, Shiny, and Want to Find
 - 1,225 bundled images and no runtime internet requirement
 

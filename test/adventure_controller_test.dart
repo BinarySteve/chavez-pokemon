@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pokemon_adventure/application/adventure_controller.dart';
 import 'package:pokemon_adventure/domain/models/collection_state.dart';
+import 'package:pokemon_adventure/domain/models/encounter_guide.dart';
 import 'package:pokemon_adventure/domain/models/pokemon_species.dart';
 import 'package:pokemon_adventure/domain/models/trainer_profile.dart';
 import 'package:pokemon_adventure/domain/repositories.dart';
@@ -69,6 +70,23 @@ void main() {
       expect(controller.collectionFor(25).isCaught, isFalse);
     },
   );
+
+  test('encounter guide failure never blocks core readiness', () async {
+    final controller = AdventureController(
+      referenceRepository: _ReferenceRepositoryFake(),
+      userRepository: _UserRepositoryFake(),
+      updateService: _UpdateServiceFake(),
+      encounterGuideRepository: _FailingEncounterGuideRepository(),
+    );
+    addTearDown(controller.dispose);
+
+    await controller.initialize();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.isReady, isTrue);
+    expect(controller.error, isNull);
+    expect(controller.encounterGuide, EncounterGuide.empty);
+  });
 }
 
 AdventureController _controller(_UserRepositoryFake user) {
@@ -128,4 +146,9 @@ class _UpdateServiceFake implements UpdateService {
       message: 'Current',
     );
   }
+}
+
+class _FailingEncounterGuideRepository implements EncounterGuideRepository {
+  @override
+  Future<EncounterGuide> load() async => throw const FormatException('bad');
 }

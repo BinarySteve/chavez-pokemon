@@ -2,6 +2,48 @@
 
 Verified against the repository on 2026-07-23.
 
+## Completed phase: progress-aware Gym recommendations
+
+Purpose: lead with Pokémon the child already owns, then offer a small,
+conservative set of useful Pokémon she can encounter before the viewed Gym.
+
+Implemented behavior:
+
+- an independently versioned bundled guide contains 65 reviewed areas and 737
+  grouped Let’s Go encounter records covering 130 directly encountered roster
+  species;
+- each opponent shows up to four matching Caught helpers, followed by up to
+  three uncaught pre-Gym walking suggestions;
+- catch suggestions include matching move types, up to two locations, level
+  ranges, Rare spawn labels, and explicit Both games/Pikachu/Eevee labels;
+- ranking is deterministic and prioritizes effectiveness, normal walking
+  encounters, both-game availability, useful move variety, and National Dex
+  number;
+- only condition-free `overworld` and `overworld-special` records are eligible,
+  and an area must have `requiredBadges` lower than the viewed Gym number; and
+- guide loading is nonblocking and fail-safe: missing or malformed guide data
+  keeps caught-only advice available.
+
+Boundary: this is conservative Let’s Go-compatible guidance, not a guarantee
+of exact story progression or version availability. It intentionally excludes
+gifts, trades, water, flying, static, conditioned, fossil, transfer, and
+evolution-only paths until their prerequisites are structured.
+
+Compatibility:
+
+- dataset version 4, content schema 1, trainer schema 1, reference database,
+  content manifest, and 1,225 artwork files are unchanged;
+- the guide has its own schema version 1 and guide version 1; and
+- no runtime network access or trainer migration is added.
+
+Completion evidence:
+
+- all 44 Flutter tests and all 24 pipeline tests pass;
+- Flutter analysis reports no issues;
+- snapshot r2 and the bundled guide validate against their pinned hashes and
+  audited counts; and
+- the Android debug APK builds successfully.
+
 ## Completed phase: child-guidance correctness
 
 Purpose: keep current child-facing Gym advice within the Let’s Go roster, make
@@ -37,17 +79,17 @@ Compatibility:
 - bundled databases, manifests, and artwork are unchanged; and
 - navigation keeps the existing four destinations.
 
-Recommendation boundary: helper species must be marked Caught and be Let’s
-Go-compatible. Because route and story-gate availability are not structured in
-schema 1, the guide does not guess which uncaught Pokémon may be available at a
-particular progression point or in one game version.
+Recommendation boundary at completion of that phase was caught-only. The
+progress-aware phase above adds separately versioned encounter guidance without
+changing reference schema 1.
 
 Completion evidence:
 
 - Dart formatting is unchanged and Flutter analysis reports no issues;
-- all 37 Flutter tests pass, including domain, controller, widget,
+- the child-guidance phase’s original tests remain part of the 44 passing
+  Flutter tests, including domain, controller, widget,
   accessibility, large-text, route-back, and modal-back coverage;
-- all 20 reference-pipeline tests and the production snapshot/output
+- all 24 reference-pipeline tests and the production snapshot/output
   validators pass;
 - the Android debug APK builds successfully;
 - the bundled reference DB and manifest retain SHA-256 values

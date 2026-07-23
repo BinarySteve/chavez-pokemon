@@ -1,4 +1,5 @@
 import 'models/collection_state.dart';
+import 'models/encounter_guide.dart';
 import 'models/pokemon_species.dart';
 import 'models/trainer_profile.dart';
 
@@ -20,6 +21,10 @@ abstract interface class UserRepository {
   Future<void> saveCollectionState(CollectionState state);
 
   Future<void> close();
+}
+
+abstract interface class EncounterGuideRepository {
+  Future<EncounterGuide> load();
 }
 
 enum UpdateCheckState { disabled, checking, current, updateAvailable, failed }

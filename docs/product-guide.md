@@ -80,22 +80,30 @@ entry separates guidance by opposing Pokémon and includes:
 - opponent team and levels
 - best attacking move types plus other helpful choices, with their actual
   effectiveness multipliers
-- up to eight Pokémon marked Caught that contain a relevant move in the
-  bundled move data
+- up to four Pokémon marked Caught that contain a relevant move in the bundled
+  move data
+- up to three uncaught Pokémon with a matching move type and a condition-free
+  walking encounter before the viewed Gym
+- up to two locations per catch suggestion, including level range, normal or
+  Rare spawn label, and Pikachu/Eevee version availability
 
 Gym recommendations are guidance, not guaranteed wins. Team level, stats, and
 the moves currently equipped still matter. A helper tile identifies matching
 move types, not an equipped move set.
 
-Recommendations use only species marked Caught in the child’s Collection and
-also restrict them to the Let’s Go-compatible roster: National Pokédex numbers
-1–151, Meltan, and Melmetal. If none match, the guide reassures the child and
-suggests the best move types to look for on their own team.
+Caught recommendations ignore encounter progression because the child already
+owns that Pokémon. Uncaught suggestions use the separate, pinned Let’s Go
+encounter guide and a conservative reviewed badge map. A Gym numbered `N`
+shows only eligible walking encounters whose `requiredBadges` value is less
+than `N`.
 
-The reference data does not contain reliable route and story-gate
-availability. The app therefore does not recommend an uncaught Pokémon or
-pretend it knows what can be caught at the child’s current progression point.
-Marking Collection state accurately keeps the suggestions useful.
+These recommendations are Let’s Go-compatible guidance, not a
+progression-perfect or version-exclusive availability guarantee. The guide
+does not model alternate Kanto routes, story events, gifts, trades, Surf,
+flying, static encounters, fossils, transfers, Poké Flute encounters, or
+evolution-only availability. Version-exclusive encounters are labeled
+explicitly. If neither caught nor catchable helpers match, the guide reassures
+the child and falls back to useful move types.
 
 ## Interaction and accessibility
 

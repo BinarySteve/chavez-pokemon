@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../domain/models/collection_state.dart';
+import '../domain/models/encounter_guide.dart';
 import '../domain/models/pokemon_species.dart';
 import '../domain/models/trainer_profile.dart';
 import '../domain/repositories.dart';
@@ -12,11 +13,14 @@ class AdventureController extends ChangeNotifier {
     required this.referenceRepository,
     required this.userRepository,
     required this.updateService,
-  });
+    EncounterGuideRepository? encounterGuideRepository,
+  }) : encounterGuideRepository =
+           encounterGuideRepository ?? const _EmptyEncounterGuideRepository();
 
   final ReferenceRepository referenceRepository;
   final UserRepository userRepository;
   final UpdateService updateService;
+  final EncounterGuideRepository encounterGuideRepository;
 
   List<PokemonSpecies> _species = const [];
   Map<int, CollectionState> _collection = const {};
@@ -28,6 +32,7 @@ class AdventureController extends ChangeNotifier {
   );
   Object? _error;
   bool _isReady = false;
+  EncounterGuide _encounterGuide = EncounterGuide.empty;
   final Set<int> _pendingCollectionUpdates = {};
 
   List<PokemonSpecies> get species => _species;
@@ -37,6 +42,7 @@ class AdventureController extends ChangeNotifier {
   Object? get error => _error;
   bool get isReady => _isReady;
   bool get needsOnboarding => _profile == null;
+  EncounterGuide get encounterGuide => _encounterGuide;
 
   bool isCollectionUpdatePending(int speciesId) =>
       _pendingCollectionUpdates.contains(speciesId);
@@ -72,11 +78,21 @@ class AdventureController extends ChangeNotifier {
       _collection = results[3] as Map<int, CollectionState>;
       _isReady = true;
       notifyListeners();
+      unawaited(_loadEncounterGuide());
       unawaited(checkForUpdates());
     } on Object catch (error) {
       _error = error;
       _isReady = true;
       notifyListeners();
+    }
+  }
+
+  Future<void> _loadEncounterGuide() async {
+    try {
+      _encounterGuide = await encounterGuideRepository.load();
+      notifyListeners();
+    } on Object {
+      _encounterGuide = EncounterGuide.empty;
     }
   }
 
@@ -143,4 +159,11 @@ class AdventureController extends ChangeNotifier {
     unawaited(userRepository.close());
     super.dispose();
   }
+}
+
+class _EmptyEncounterGuideRepository implements EncounterGuideRepository {
+  const _EmptyEncounterGuideRepository();
+
+  @override
+  Future<EncounterGuide> load() async => EncounterGuide.empty;
 }

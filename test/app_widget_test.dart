@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pokemon_adventure/app.dart';
 import 'package:pokemon_adventure/application/adventure_controller.dart';
 import 'package:pokemon_adventure/domain/models/collection_state.dart';
+import 'package:pokemon_adventure/domain/models/encounter_guide.dart';
 import 'package:pokemon_adventure/domain/models/pokemon_species.dart';
 import 'package:pokemon_adventure/domain/models/trainer_profile.dart';
 import 'package:pokemon_adventure/domain/repositories.dart';
@@ -160,7 +161,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final controller = AdventureController(
-      referenceRepository: _ReferenceFake(),
+      referenceRepository: _GymReferenceFake(),
       userRepository: _UserFake(
         profile: const TrainerProfile(
           name: 'Nova',
@@ -173,6 +174,7 @@ void main() {
         },
       ),
       updateService: _UpdateFake(),
+      encounterGuideRepository: const _EncounterGuideFake(_brockGuide),
     );
 
     await tester.pumpWidget(AdventureApp(controller: controller));
@@ -185,6 +187,22 @@ void main() {
     expect(find.text('Sprigatito'), findsNothing);
     expect(find.text('Against Onix: Ground 2×'), findsOneWidget);
     expect(find.text('Your caught helpers'), findsWidgets);
+    expect(find.text('You can catch these before Brock'), findsWidgets);
+    expect(find.text('Oddish'), findsWidgets);
+    expect(
+      find.text('Route 1 · Wild · Lv. 3–6 · Pikachu version'),
+      findsWidgets,
+    );
+    expect(find.text('Bellsprout'), findsWidgets);
+    expect(find.text('Route 1 · Wild · Lv. 3–6 · Eevee version'), findsWidgets);
+    expect(find.text('Bulbasaur'), findsWidgets);
+    expect(
+      find.text('Viridian Forest · Rare spawn · Lv. 3–6 · Both games'),
+      findsWidgets,
+    );
+    expect(find.text('Lickitung'), findsNothing);
+    expect(find.text('Kangaskhan'), findsNothing);
+    expect(find.text('Mew'), findsNothing);
     expect(tester.takeException(), isNull);
 
     await controller.updateCollection(const CollectionState(speciesId: 74));
@@ -385,6 +403,120 @@ class _ReferenceFake implements ReferenceRepository {
       evolutionEdges: [],
     ),
   ];
+}
+
+class _GymReferenceFake implements ReferenceRepository {
+  @override
+  Future<void> close() async {}
+
+  @override
+  Future<Map<String, String>> loadMetadata() async => {
+    'dataset_version': '4',
+    'display_name': 'Gym Fixture',
+  };
+
+  @override
+  Future<List<PokemonSpecies>> loadSpecies() async => [
+    ...await _ReferenceFake().loadSpecies(),
+    _gymPokemon(1, 'Bulbasaur', 'Grass'),
+    _gymPokemon(43, 'Oddish', 'Grass'),
+    _gymPokemon(69, 'Bellsprout', 'Grass'),
+    _gymPokemon(108, 'Lickitung', 'Water'),
+    _gymPokemon(115, 'Kangaskhan', 'Water'),
+    _gymPokemon(151, 'Mew', 'Water'),
+  ];
+}
+
+PokemonSpecies _gymPokemon(int id, String name, String moveType) {
+  return PokemonSpecies(
+    id: id,
+    dexNumber: id,
+    name: name,
+    classification: 'Fixture Pokémon',
+    description: 'Fixture',
+    heightMeters: 1,
+    weightKilograms: 1,
+    generation: 1,
+    types: const ['Normal'],
+    abilities: const [],
+    forms: const [],
+    evolutionEdges: const [],
+    moves: [
+      PokemonMove(
+        name: '$moveType move',
+        type: moveType,
+        learnMethod: 'level-up',
+        levelLearned: 1,
+      ),
+    ],
+  );
+}
+
+const _brockGuide = EncounterGuide(
+  guideSchemaVersion: 1,
+  guideVersion: 1,
+  logicalSha256:
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  areas: {
+    1: LetsGoEncounterArea(id: 1, displayName: 'Route 1', requiredBadges: 0),
+    2: LetsGoEncounterArea(
+      id: 2,
+      displayName: 'Viridian Forest',
+      requiredBadges: 0,
+    ),
+    3: LetsGoEncounterArea(id: 3, displayName: 'Route 3', requiredBadges: 1),
+  },
+  encounters: [
+    LetsGoEncounter(
+      speciesId: 43,
+      areaId: 1,
+      versions: [LetsGoVersion.pikachu],
+      method: 'overworld',
+      minLevel: 3,
+      maxLevel: 6,
+      slotRarity: 20,
+      conditions: [],
+    ),
+    LetsGoEncounter(
+      speciesId: 69,
+      areaId: 1,
+      versions: [LetsGoVersion.eevee],
+      method: 'overworld',
+      minLevel: 3,
+      maxLevel: 6,
+      slotRarity: 20,
+      conditions: [],
+    ),
+    LetsGoEncounter(
+      speciesId: 1,
+      areaId: 2,
+      versions: [LetsGoVersion.pikachu, LetsGoVersion.eevee],
+      method: 'overworld-special',
+      minLevel: 3,
+      maxLevel: 6,
+      slotRarity: 1,
+      conditions: [],
+    ),
+    LetsGoEncounter(
+      speciesId: 108,
+      areaId: 3,
+      versions: [LetsGoVersion.pikachu, LetsGoVersion.eevee],
+      method: 'overworld',
+      minLevel: 10,
+      maxLevel: 12,
+      slotRarity: 10,
+      conditions: [],
+    ),
+  ],
+);
+
+class _EncounterGuideFake implements EncounterGuideRepository {
+  const _EncounterGuideFake(this.guide);
+
+  final EncounterGuide guide;
+
+  @override
+  Future<EncounterGuide> load() async => guide;
 }
 
 class _UserFake implements UserRepository {
