@@ -13,10 +13,13 @@ Implemented behavior:
 - one shared Let’s Go predicate covers species 1–151, 808, and 809 for both
   Pokédex filtering and Gym helpers;
 - `GymRecommendationService` calculates advice separately for every opponent,
-  reports actual effective-move multipliers, requires a matching move, and
-  ranks at most eight helpers deterministically;
+  reports actual effective-move multipliers, requires both Caught state and a
+  matching move, and ranks at most eight helpers deterministically;
 - the destination and screen are named “Let’s Go Gyms,” and helper cards name
   their opponent and useful move type;
+- the guide separates best move types from other helpful choices, labels
+  recommendations “Your caught helpers,” and gives a reassuring move-type
+  fallback instead of suggesting an uncaught Pokémon;
 - collection changes are persistence-first, with per-species pending state,
   disabled controls during writes, unchanged saved state on failure, and a
   retry action;
@@ -34,14 +37,15 @@ Compatibility:
 - bundled databases, manifests, and artwork are unchanged; and
 - navigation keeps the existing four destinations.
 
-Recommendation boundary: helper species are Let’s Go-compatible, but the guide
-does not guarantee availability at a particular story-progression point or
-exclusivity to Pikachu or Eevee version.
+Recommendation boundary: helper species must be marked Caught and be Let’s
+Go-compatible. Because route and story-gate availability are not structured in
+schema 1, the guide does not guess which uncaught Pokémon may be available at a
+particular progression point or in one game version.
 
 Completion evidence:
 
 - Dart formatting is unchanged and Flutter analysis reports no issues;
-- all 36 Flutter tests pass, including domain, controller, widget,
+- all 37 Flutter tests pass, including domain, controller, widget,
   accessibility, large-text, route-back, and modal-back coverage;
 - all 20 reference-pipeline tests and the production snapshot/output
   validators pass;

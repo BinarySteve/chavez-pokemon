@@ -66,6 +66,7 @@ void main() {
       await tester.tap(find.textContaining('Brock'));
       await tester.pumpAndSettle();
       expect(find.text('Against Onix · Level 12'), findsOneWidget);
+      expect(find.text('No matching caught helper yet.'), findsWidgets);
       expect(tester.takeException(), isNull);
     });
 

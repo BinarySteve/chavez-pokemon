@@ -39,6 +39,7 @@ class GymRecommendationService {
   GymOpponentAdvice recommendForOpponent({
     required PokemonSpecies opponent,
     required Iterable<PokemonSpecies> candidates,
+    required Set<int> caughtSpeciesIds,
     int limit = 8,
   }) {
     final moveTypes =
@@ -54,7 +55,8 @@ class GymRecommendationService {
     final helpers = <GymHelperRecommendation>[];
 
     for (final pokemon in candidates) {
-      if (!isLetsGoSpecies(pokemon.id)) {
+      if (!caughtSpeciesIds.contains(pokemon.id) ||
+          !isLetsGoSpecies(pokemon.id)) {
         continue;
       }
       final matchingTypes =

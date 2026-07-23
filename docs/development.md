@@ -62,8 +62,9 @@ Current coverage includes:
 - All Pokémon and Let’s Go scope switching
 - tap-outside keyboard dismissal
 - opponent-isolated Gym recommendation ranking, Let’s Go roster exclusion,
-  move requirements, multipliers, and helper caps
-- Gym helper rendering and target/type labels
+  Caught-state filtering, move requirements, multipliers, and helper caps
+- Gym helper rendering, target/type labels, and the no-matching-caught-helper
+  state
 - kid-friendly matchup labels
 - theme and type-badge contrast plus focused semantic labels
 - 200% text scaling on phone and tablet for onboarding, Pokédex, Collection,

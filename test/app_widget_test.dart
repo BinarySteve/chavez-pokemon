@@ -167,6 +167,10 @@ void main() {
           avatar: 'star',
           partnerSpeciesId: 25,
         ),
+        collection: const {
+          74: CollectionState(speciesId: 74, isCaught: true),
+          906: CollectionState(speciesId: 906, isCaught: true),
+        },
       ),
       updateService: _UpdateFake(),
     );
@@ -180,8 +184,13 @@ void main() {
 
     expect(find.text('Sprigatito'), findsNothing);
     expect(find.text('Against Onix: Ground 2×'), findsOneWidget);
-    expect(find.text('Let’s Go helpers with matching moves'), findsWidgets);
+    expect(find.text('Your caught helpers'), findsWidgets);
     expect(tester.takeException(), isNull);
+
+    await controller.updateCollection(const CollectionState(speciesId: 74));
+    await tester.pumpAndSettle();
+    expect(find.text('Against Onix: Ground 2×'), findsNothing);
+    expect(find.text('No matching caught helper yet.'), findsWidgets);
   });
 
   testWidgets('collection save failure keeps saved state and offers retry', (
@@ -379,11 +388,15 @@ class _ReferenceFake implements ReferenceRepository {
 }
 
 class _UserFake implements UserRepository {
-  _UserFake({this.profile, this.saveError});
+  _UserFake({
+    this.profile,
+    this.saveError,
+    Map<int, CollectionState> collection = const {},
+  }) : collection = Map.of(collection);
 
   TrainerProfile? profile;
   Object? saveError;
-  final Map<int, CollectionState> collection = {};
+  final Map<int, CollectionState> collection;
 
   @override
   Future<void> close() async {}

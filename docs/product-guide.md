@@ -78,18 +78,24 @@ entry separates guidance by opposing Pokémon and includes:
 
 - leader, city, specialty, and badge
 - opponent team and levels
-- useful attacking move types with their actual effectiveness multipliers
-- up to eight Let’s Go-compatible Pokémon that contain a relevant move in the
+- best attacking move types plus other helpful choices, with their actual
+  effectiveness multipliers
+- up to eight Pokémon marked Caught that contain a relevant move in the
   bundled move data
 
 Gym recommendations are guidance, not guaranteed wins. Team level, stats, and
 the moves currently equipped still matter. A helper tile identifies matching
 move types, not an equipped move set.
 
-Recommendations are restricted to the Let’s Go-compatible species roster:
-National Pokédex numbers 1–151, Meltan, and Melmetal. This is a compatibility
-filter, not a guarantee that a helper is available at the current story
-progression point or exclusive to the child’s game version.
+Recommendations use only species marked Caught in the child’s Collection and
+also restrict them to the Let’s Go-compatible roster: National Pokédex numbers
+1–151, Meltan, and Melmetal. If none match, the guide reassures the child and
+suggests the best move types to look for on their own team.
+
+The reference data does not contain reliable route and story-gate
+availability. The app therefore does not recommend an uncaught Pokémon or
+pretend it knows what can be caught at the child’s current progression point.
+Marking Collection state accurately keeps the suggestions useful.
 
 ## Interaction and accessibility
 

@@ -124,7 +124,10 @@ The fixed Gym roster facts remain in the UI model.
 opponent-specific effective move types and deterministic helper rankings. It
 uses the shared `isLetsGoSpecies` domain predicate, which also powers the
 Pokédex scope. Recommendations require a matching move in the bundled data and
-exclude neutral, resisted, and immune move types.
+an ID in the controller’s current Caught set; they exclude uncaught,
+out-of-roster, neutral, resisted, and immune choices. `GymGuideScreen` listens
+to the controller so returning from a Collection change refreshes suggestions
+without restarting the app.
 
 `AdventureController` owns a per-species pending-write set for collection
 changes. Screens route favorite, status, and automatic Seen writes through one
