@@ -1,0 +1,9 @@
+{
+  "manifestVersion": 1,
+  "channel": "development",
+  "datasetVersion": 4,
+  "contentSchema": 1,
+  "displayName": "National Pokédex Family Companion",
+  "productionApproved": false,
+  "message": "National Pokédex data is current."
+}
