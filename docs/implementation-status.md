@@ -2,6 +2,58 @@
 
 Verified against the repository on 2026-07-23.
 
+## Completed phase: child-guidance correctness
+
+Purpose: keep current child-facing Gym advice within the Let’s Go roster, make
+collection writes truthful when storage fails, and protect important layouts
+and labels at large text.
+
+Implemented behavior:
+
+- one shared Let’s Go predicate covers species 1–151, 808, and 809 for both
+  Pokédex filtering and Gym helpers;
+- `GymRecommendationService` calculates advice separately for every opponent,
+  reports actual effective-move multipliers, requires a matching move, and
+  ranks at most eight helpers deterministically;
+- the destination and screen are named “Let’s Go Gyms,” and helper cards name
+  their opponent and useful move type;
+- collection changes are persistence-first, with per-species pending state,
+  disabled controls during writes, unchanged saved state on failure, and a
+  retry action;
+- primary theme controls and type badges choose foreground colors that meet
+  the 4.5:1 text-contrast threshold;
+- targeted semantics remove duplicate spoken artwork, badge, progress, and
+  count labels; and
+- onboarding, Pokédex, Collection, Gym helpers, Pokémon details, and form
+  sheets use wrapping or natural-height layouts under large text.
+
+Compatibility:
+
+- dataset version remains 4 and content schema remains 1;
+- the trainer database remains schema version 1 with no migration;
+- bundled databases, manifests, and artwork are unchanged; and
+- navigation keeps the existing four destinations.
+
+Recommendation boundary: helper species are Let’s Go-compatible, but the guide
+does not guarantee availability at a particular story-progression point or
+exclusivity to Pikachu or Eevee version.
+
+Completion evidence:
+
+- Dart formatting is unchanged and Flutter analysis reports no issues;
+- all 36 Flutter tests pass, including domain, controller, widget,
+  accessibility, large-text, route-back, and modal-back coverage;
+- all 20 reference-pipeline tests and the production snapshot/output
+  validators pass;
+- the Android debug APK builds successfully;
+- the bundled reference DB and manifest retain SHA-256 values
+  `35a5cffc50f115ba1c80d860be43ec9ec8a12a248a186b2e61f1b96247170319`
+  and
+  `4c25cf025f3517ff2330e6aede7c6550a295213e6c0b9784c3db4f3df88b1546`;
+  and
+- 1,025 base and 200 form artwork files remain present, with no diff to
+  bundled content, artwork, or trainer-schema code.
+
 ## Completed phase: frozen reference-data pipeline
 
 Purpose: separate network acquisition from deterministic reference-data
@@ -113,7 +165,7 @@ Completion evidence:
 ## Working private-family application
 
 - Flutter 3.44.4 and Dart 3.12.2 match package constraints.
-- Static analysis passes and all 17 automated tests pass.
+- Static analysis and the expanded automated test suites pass.
 - Android release APK builds successfully at about 199 MB.
 - Package identifier is `com.chavezfamily.pokemon_adventure`.
 - Minimum Android SDK is 24; target and compile SDK are 36.
@@ -122,8 +174,9 @@ Completion evidence:
 - Reference and trainer data use separate SQLite files.
 - Reference database opens read-only and collection changes write only to the
   trainer database.
-- Home, Pokédex, Collection, Let’s Go Gym guide, onboarding, detail pages,
-  local artwork, adaptive navigation, and basic accessibility behavior work.
+- Home, Pokédex, Collection, Let’s Go Gyms, onboarding, detail pages, local
+  artwork, adaptive navigation, and tested large-text/accessibility behavior
+  work.
 
 ## Verified bundled snapshot
 
@@ -159,9 +212,6 @@ sealed or immutable source snapshot.
   download or activate content.
 - Trainer database has schema version 1 but no explicit upgrade or downgrade
   migration callbacks.
-- Collection state changes optimistically before the database write succeeds.
-- Gym helper candidates are not yet restricted to Pokémon available in
-  Let’s Go.
 - Startup and search performance have no representative-device budget.
 
 ## Data-pipeline limits
@@ -194,7 +244,6 @@ sealed or immutable source snapshot.
 
 ## Next implementation boundary
 
-Next code phase corrects current child-guidance and persistence behavior.
-Schema hardening, transactional content activation, homelab updates, and
-permanent APK signing remain separate later phases. Do not combine them into
-one migration.
+Next code phase is targeted reference-schema hardening after the frozen
+pipeline. Transactional content activation, homelab updates, and permanent APK
+signing remain separate later phases. Do not combine them into one migration.

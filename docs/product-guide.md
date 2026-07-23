@@ -66,29 +66,38 @@ can mark a species as:
 - Shiny
 - Want to Find
 
-### Gyms
+The app waits for the local trainer database to save a change before updating
+the control. While that species is saving, its collection controls are
+disabled. If the write fails, the last saved values remain visible and the app
+offers a retry.
+
+### Let’s Go Gyms
 
 The Gym guide covers the first story battle for all eight Let’s Go Gyms. Each
-entry includes:
+entry separates guidance by opposing Pokémon and includes:
 
 - leader, city, specialty, and badge
 - opponent team and levels
-- useful attacking move types
-- Pokémon that can learn relevant moves
+- useful attacking move types with their actual effectiveness multipliers
+- up to eight Let’s Go-compatible Pokémon that contain a relevant move in the
+  bundled move data
 
 Gym recommendations are guidance, not guaranteed wins. Team level, stats, and
-the moves currently equipped still matter.
+the moves currently equipped still matter. A helper tile identifies matching
+move types, not an equipped move set.
 
-Current limitation: helper candidates are selected from the full bundled
-National Pokédex, so some suggested Pokémon may not be obtainable in Let’s Go.
-The recommendation should be read as move-type guidance until the next
-correctness phase restricts helpers to the Let’s Go roster.
+Recommendations are restricted to the Let’s Go-compatible species roster:
+National Pokédex numbers 1–151, Meltan, and Melmetal. This is a compatibility
+filter, not a guarantee that a helper is available at the current story
+progression point or exclusive to the child’s game version.
 
 ## Interaction and accessibility
 
 - tapping outside an input dismisses keyboard focus
 - layouts adapt between phone navigation bars and tablet navigation rails
-- the phone Home screen is tested at 200% text scale; broader large-text
-  coverage remains planned
+- onboarding, Pokédex, Collection, expanded Gym guidance, Pokémon details, and
+  form sheets are tested at 200% text scale on phone and tablet viewports
+- lists and helper choices use natural-height or wrapping layouts at large text
 - artwork and controls include semantic labels
 - collection and form controls use large touch targets
+- theme controls and type badges maintain at least 4.5:1 text contrast

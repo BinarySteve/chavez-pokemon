@@ -88,7 +88,7 @@ class _AdventureShellState extends State<AdventureShell> {
                       NavigationRailDestination(
                         icon: Icon(Icons.shield_outlined),
                         selectedIcon: Icon(Icons.shield_rounded),
-                        label: Text('Gyms'),
+                        label: Text('Let’s Go Gyms'),
                       ),
                     ],
                     onDestinationSelected: (index) {
@@ -129,7 +129,7 @@ class _AdventureShellState extends State<AdventureShell> {
               NavigationDestination(
                 icon: Icon(Icons.shield_outlined),
                 selectedIcon: Icon(Icons.shield_rounded),
-                label: 'Gyms',
+                label: 'Let’s Go Gyms',
               ),
             ],
           ),

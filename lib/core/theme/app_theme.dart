@@ -16,10 +16,11 @@ class AppTheme {
           surface: cream,
         ).copyWith(
           primary: coral,
-          onPrimary: Colors.white,
+          onPrimary: Colors.black,
           secondary: leaf,
-          onSecondary: Colors.white,
+          onSecondary: Colors.black,
           tertiary: sky,
+          onTertiary: Colors.black,
           onSurface: ink,
           surfaceContainerLowest: const Color(0xFFFFFCF5),
           surfaceContainerLow: const Color(0xFFFFF4DE),

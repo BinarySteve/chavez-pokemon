@@ -28,6 +28,7 @@ class AdventureController extends ChangeNotifier {
   );
   Object? _error;
   bool _isReady = false;
+  final Set<int> _pendingCollectionUpdates = {};
 
   List<PokemonSpecies> get species => _species;
   TrainerProfile? get profile => _profile;
@@ -36,6 +37,9 @@ class AdventureController extends ChangeNotifier {
   Object? get error => _error;
   bool get isReady => _isReady;
   bool get needsOnboarding => _profile == null;
+
+  bool isCollectionUpdatePending(int speciesId) =>
+      _pendingCollectionUpdates.contains(speciesId);
 
   int get datasetVersion =>
       int.tryParse(_metadata['dataset_version'] ?? '') ?? 0;
@@ -105,11 +109,20 @@ class AdventureController extends ChangeNotifier {
   }
 
   Future<void> updateCollection(CollectionState state) async {
-    final updated = Map<int, CollectionState>.of(_collection)
-      ..[state.speciesId] = state;
-    _collection = Map.unmodifiable(updated);
+    if (_pendingCollectionUpdates.contains(state.speciesId)) {
+      return;
+    }
+    _pendingCollectionUpdates.add(state.speciesId);
     notifyListeners();
-    await userRepository.saveCollectionState(state);
+    try {
+      await userRepository.saveCollectionState(state);
+      final updated = Map<int, CollectionState>.of(_collection)
+        ..[state.speciesId] = state;
+      _collection = Map.unmodifiable(updated);
+    } finally {
+      _pendingCollectionUpdates.remove(state.speciesId);
+      notifyListeners();
+    }
   }
 
   Future<void> checkForUpdates() async {

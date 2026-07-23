@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../application/adventure_controller.dart';
+import '../domain/lets_go_species.dart';
 import '../domain/models/pokemon_species.dart';
 import 'widgets/pokemon_emblem.dart';
 import 'widgets/type_badge.dart';
@@ -42,6 +43,7 @@ class _PokedexScreenState extends State<PokedexScreen> {
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
+        final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
         final allTypes =
             widget.controller.species
                 .expand((pokemon) => pokemon.types)
@@ -57,7 +59,7 @@ class _PokedexScreenState extends State<PokedexScreen> {
         final results = widget.controller.species
             .where((pokemon) {
               if (_scope == PokedexScope.letsGo &&
-                  !_isLetsGoSpecies(pokemon.id)) {
+                  !isLetsGoSpecies(pokemon.id)) {
                 return false;
               }
               if (!pokemon.matches(_query)) {
@@ -135,24 +137,49 @@ class _PokedexScreenState extends State<PokedexScreen> {
                           onChanged: (value) => setState(() => _query = value),
                         ),
                         const SizedBox(height: 12),
-                        SegmentedButton<PokedexScope>(
-                          segments: const [
-                            ButtonSegment(
-                              value: PokedexScope.all,
-                              icon: Icon(Icons.public_rounded),
-                              label: Text('All Pokémon'),
-                            ),
-                            ButtonSegment(
-                              value: PokedexScope.letsGo,
-                              icon: Icon(Icons.videogame_asset_rounded),
-                              label: Text('Let’s Go'),
-                            ),
-                          ],
-                          selected: {_scope},
-                          onSelectionChanged: (value) {
-                            setState(() => _scope = value.single);
-                          },
-                        ),
+                        if (largeText)
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ChoiceChip(
+                                avatar: const Icon(Icons.public_rounded),
+                                label: const Text('All Pokémon'),
+                                selected: _scope == PokedexScope.all,
+                                onSelected: (_) =>
+                                    setState(() => _scope = PokedexScope.all),
+                              ),
+                              ChoiceChip(
+                                avatar: const Icon(
+                                  Icons.videogame_asset_rounded,
+                                ),
+                                label: const Text('Let’s Go'),
+                                selected: _scope == PokedexScope.letsGo,
+                                onSelected: (_) => setState(
+                                  () => _scope = PokedexScope.letsGo,
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          SegmentedButton<PokedexScope>(
+                            segments: const [
+                              ButtonSegment(
+                                value: PokedexScope.all,
+                                icon: Icon(Icons.public_rounded),
+                                label: Text('All Pokémon'),
+                              ),
+                              ButtonSegment(
+                                value: PokedexScope.letsGo,
+                                icon: Icon(Icons.videogame_asset_rounded),
+                                label: Text('Let’s Go'),
+                              ),
+                            ],
+                            selected: {_scope},
+                            onSelectionChanged: (value) {
+                              setState(() => _scope = value.single);
+                            },
+                          ),
                         const SizedBox(height: 12),
                         _ActiveFilters(
                           type: _type,
@@ -196,6 +223,26 @@ class _PokedexScreenState extends State<PokedexScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
                 sliver: SliverLayoutBuilder(
                   builder: (context, constraints) {
+                    if (largeText) {
+                      return SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final pokemon = results[index];
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: index == results.length - 1 ? 0 : 12,
+                            ),
+                            child: _PokemonCard(
+                              pokemon: pokemon,
+                              isFavorite: widget.controller
+                                  .collectionFor(pokemon.id)
+                                  .isFavorite,
+                              forceHorizontal: true,
+                              onTap: () => widget.onOpenPokemon(pokemon),
+                            ),
+                          );
+                        }, childCount: results.length),
+                      );
+                    }
                     final width = constraints.crossAxisExtent;
                     final columns = width >= 980
                         ? 4
@@ -352,8 +399,6 @@ class _PokedexScreenState extends State<PokedexScreen> {
   }
 }
 
-bool _isLetsGoSpecies(int id) => id <= 151 || id == 808 || id == 809;
-
 String _filterLabel(CollectionFilter filter) {
   return switch (filter) {
     CollectionFilter.all => 'All entries',
@@ -424,11 +469,13 @@ class _PokemonCard extends StatelessWidget {
     required this.pokemon,
     required this.isFavorite,
     required this.onTap,
+    this.forceHorizontal = false,
   });
 
   final PokemonSpecies pokemon;
   final bool isFavorite;
   final VoidCallback onTap;
+  final bool forceHorizontal;
 
   @override
   Widget build(BuildContext context) {
@@ -440,7 +487,9 @@ class _PokemonCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final horizontal = constraints.maxWidth > constraints.maxHeight;
+              final horizontal =
+                  forceHorizontal ||
+                  constraints.maxWidth > constraints.maxHeight;
               final details = Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

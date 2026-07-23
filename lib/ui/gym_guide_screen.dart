@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../application/adventure_controller.dart';
-import '../domain/battle/type_matchups.dart';
+import '../application/gym_recommendation_service.dart';
 import '../domain/models/pokemon_species.dart';
 import 'widgets/pokemon_emblem.dart';
 import 'widgets/type_badge.dart';
@@ -22,7 +22,7 @@ class GymGuideScreen extends StatelessWidget {
       key: const PageStorageKey('gym-guide-scroll'),
       slivers: [
         SliverAppBar.large(
-          title: const Text('Gym battle guide'),
+          title: const Text('Let’s Go Gyms'),
           automaticallyImplyLeading: false,
         ),
         SliverPadding(
@@ -30,7 +30,7 @@ class GymGuideScreen extends StatelessWidget {
           sliver: SliverList.list(
             children: [
               Text(
-                'Choose a Gym. See its team, strong move types, and Pokémon that may help.',
+                'Choose a Gym. Plan for each opponent with strong move types and Let’s Go-compatible helpers.',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 8),
@@ -64,22 +64,15 @@ class _GymCard extends StatelessWidget {
   final GymGuide gym;
   final AdventureController controller;
   final ValueChanged<PokemonSpecies> onOpenPokemon;
+  static const _recommendations = GymRecommendationService();
 
   @override
   Widget build(BuildContext context) {
-    final opponents = gym.team
-        .map((member) => controller.speciesById(member.speciesId))
-        .whereType<PokemonSpecies>()
-        .toList();
-    final usefulTypes = <String>{
-      for (final pokemon in opponents) ...bestAttackTypes(pokemon.types),
-    };
-    final helpers = controller.species
-        .where((pokemon) {
-          return pokemon.moves.any((move) => usefulTypes.contains(move.type));
-        })
-        .take(8)
-        .toList();
+    final opponents = [
+      for (final member in gym.team)
+        if (controller.speciesById(member.speciesId) case final pokemon?)
+          _ResolvedOpponent(pokemon: pokemon, level: member.level),
+    ];
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -94,85 +87,209 @@ class _GymCard extends StatelessWidget {
           const Divider(),
           Text('Their team', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          for (var index = 0; index < opponents.length; index++)
+          for (final opponent in opponents)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: PokemonEmblem(pokemon: opponents[index], size: 52),
-              title: Text(opponents[index].name),
-              subtitle: Text('Level ${gym.team[index].level}'),
+              leading: PokemonEmblem(pokemon: opponent.pokemon, size: 52),
+              title: Text(opponent.pokemon.name),
+              subtitle: Text('Level ${opponent.level}'),
               trailing: Wrap(
                 spacing: 4,
                 children: [
-                  for (final type in opponents[index].types)
+                  for (final type in opponent.pokemon.types)
                     TypeBadge(type: type, compact: true),
                 ],
               ),
-              onTap: () => onOpenPokemon(opponents[index]),
+              onTap: () => onOpenPokemon(opponent.pokemon),
             ),
           const SizedBox(height: 12),
           Text(
-            'Try these move types',
+            'Plan for each Pokémon',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [for (final type in usefulTypes) TypeBadge(type: type)],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Pokémon that can learn helpful moves',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 104,
-            child: ListView.separated(
-              key: PageStorageKey('gym-${gym.badgeNumber}-helpers'),
-              scrollDirection: Axis.horizontal,
-              itemCount: helpers.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final pokemon = helpers[index];
-                return Material(
-                  color: Theme.of(context).colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(18),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () => onOpenPokemon(pokemon),
-                    child: SizedBox(
-                      width: 150,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Row(
-                          children: [
-                            PokemonEmblem(pokemon: pokemon, size: 48),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                pokemon.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+          const SizedBox(height: 10),
+          for (final opponent in opponents) ...[
+            _OpponentAdviceCard(
+              advice: _recommendations.recommendForOpponent(
+                opponent: opponent.pokemon,
+                candidates: controller.species,
+              ),
+              level: opponent.level,
+              onOpenPokemon: onOpenPokemon,
             ),
-          ),
+            const SizedBox(height: 10),
+          ],
           const Text(
-            'Check that your Pokémon knows a matching move. Level and stats matter too.',
+            'Check that your Pokémon knows a matching move. Level and stats matter too. Helpers may be found later or differ by game version.',
           ),
         ],
       ),
     );
   }
 }
+
+class _ResolvedOpponent {
+  const _ResolvedOpponent({required this.pokemon, required this.level});
+
+  final PokemonSpecies pokemon;
+  final int level;
+}
+
+class _OpponentAdviceCard extends StatelessWidget {
+  const _OpponentAdviceCard({
+    required this.advice,
+    required this.level,
+    required this.onOpenPokemon,
+  });
+
+  final GymOpponentAdvice advice;
+  final int level;
+  final ValueChanged<PokemonSpecies> onOpenPokemon;
+
+  @override
+  Widget build(BuildContext context) {
+    final opponent = advice.opponent;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Against ${opponent.name} · Level $level',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text('Use these move types against ${opponent.name}:'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final moveType in advice.moveTypes)
+                  Semantics(
+                    label:
+                        '${moveType.type} moves do ${_multiplierWords(moveType.multiplier)} damage against ${opponent.name}',
+                    excludeSemantics: true,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TypeBadge(type: moveType.type, compact: true),
+                        const SizedBox(width: 5),
+                        Text(_multiplierLabel(moveType.multiplier)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Let’s Go helpers with matching moves',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 8),
+            if (advice.helpers.isEmpty)
+              const Text('No matching helpers are listed in this dataset.')
+            else
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final largeText =
+                      MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+                  final width = largeText
+                      ? constraints.maxWidth
+                      : constraints.maxWidth < 220
+                      ? constraints.maxWidth
+                      : 220.0;
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final helper in advice.helpers)
+                        SizedBox(
+                          width: width,
+                          child: _HelperTile(
+                            helper: helper,
+                            opponent: opponent,
+                            onTap: () => onOpenPokemon(helper.pokemon),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HelperTile extends StatelessWidget {
+  const _HelperTile({
+    required this.helper,
+    required this.opponent,
+    required this.onTap,
+  });
+
+  final GymHelperRecommendation helper;
+  final PokemonSpecies opponent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final moveSummary = helper.moveTypes
+        .map((item) => '${item.type} ${_multiplierLabel(item.multiplier)}')
+        .join(' · ');
+    return Semantics(
+      button: true,
+      label:
+          'Open ${helper.pokemon.name}. Against ${opponent.name}: $moveSummary',
+      excludeSemantics: true,
+      child: Material(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                PokemonEmblem(pokemon: helper.pokemon, size: 44),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        helper.pokemon.name,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      Text(
+                        'Against ${opponent.name}: $moveSummary',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _multiplierLabel(double value) =>
+    value == value.roundToDouble() ? '${value.toInt()}×' : '$value×';
+
+String _multiplierWords(double value) =>
+    value == value.roundToDouble() ? '${value.toInt()} times' : '$value times';
 
 class GymGuide {
   const GymGuide(

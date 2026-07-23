@@ -56,6 +56,7 @@ void main() {
     expect(find.text('Your partner'), findsOneWidget);
     expect(find.text('Pikachu'), findsWidgets);
     expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Let’s Go Gyms'), findsOneWidget);
   });
 
   testWidgets('returning trainer gets navigation rail on tablet', (
@@ -83,6 +84,7 @@ void main() {
 
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
+    expect(find.text('Let’s Go Gyms'), findsOneWidget);
   });
 
   testWidgets('Pokédex switches between every species and Let’s Go', (
@@ -171,13 +173,48 @@ void main() {
 
     await tester.pumpWidget(AdventureApp(controller: controller));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Gyms'));
+    await tester.tap(find.text('Let’s Go Gyms'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Brock'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Sprigatito'), findsOneWidget);
+    expect(find.text('Sprigatito'), findsNothing);
+    expect(find.text('Against Onix: Ground 2×'), findsOneWidget);
+    expect(find.text('Let’s Go helpers with matching moves'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('collection save failure keeps saved state and offers retry', (
+    tester,
+  ) async {
+    final user = _UserFake(saveError: StateError('disk full'));
+    final controller = AdventureController(
+      referenceRepository: _ReferenceFake(),
+      userRepository: user,
+      updateService: _UpdateFake(),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PokemonDetailScreen(
+          controller: controller,
+          pokemon: _ReferenceFake.pikachu,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      find.text('We couldn’t save that change. Your collection is still safe.'),
+      findsOneWidget,
+    );
+    expect(controller.collectionFor(25).isSeen, isFalse);
+    user.saveError = null;
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
+    expect(controller.collectionFor(25).isSeen, isTrue);
   });
 
   testWidgets('battle helper explains matchups in kid-friendly groups', (
@@ -253,6 +290,21 @@ void main() {
 }
 
 class _ReferenceFake implements ReferenceRepository {
+  static const pikachu = PokemonSpecies(
+    id: 25,
+    dexNumber: 25,
+    name: 'Pikachu',
+    classification: 'Mouse Pokémon',
+    description: 'A friendly local fixture.',
+    heightMeters: 0.4,
+    weightKilograms: 6,
+    generation: 1,
+    types: ['Electric'],
+    abilities: ['Static'],
+    forms: [],
+    evolutionEdges: [],
+  );
+
   @override
   Future<void> close() async {}
 
@@ -264,20 +316,7 @@ class _ReferenceFake implements ReferenceRepository {
 
   @override
   Future<List<PokemonSpecies>> loadSpecies() async => const [
-    PokemonSpecies(
-      id: 25,
-      dexNumber: 25,
-      name: 'Pikachu',
-      classification: 'Mouse Pokémon',
-      description: 'A friendly local fixture.',
-      heightMeters: 0.4,
-      weightKilograms: 6,
-      generation: 1,
-      types: ['Electric'],
-      abilities: ['Static'],
-      forms: [],
-      evolutionEdges: [],
-    ),
+    pikachu,
     PokemonSpecies(
       id: 906,
       dexNumber: 906,
@@ -313,6 +352,14 @@ class _ReferenceFake implements ReferenceRepository {
       abilities: [],
       forms: [],
       evolutionEdges: [],
+      moves: [
+        PokemonMove(
+          name: 'Dig',
+          type: 'Ground',
+          learnMethod: 'machine',
+          levelLearned: 0,
+        ),
+      ],
     ),
     PokemonSpecies(
       id: 95,
@@ -332,9 +379,10 @@ class _ReferenceFake implements ReferenceRepository {
 }
 
 class _UserFake implements UserRepository {
-  _UserFake({this.profile});
+  _UserFake({this.profile, this.saveError});
 
   TrainerProfile? profile;
+  Object? saveError;
   final Map<int, CollectionState> collection = {};
 
   @override
@@ -348,6 +396,9 @@ class _UserFake implements UserRepository {
 
   @override
   Future<void> saveCollectionState(CollectionState state) async {
+    if (saveError case final error?) {
+      throw error;
+    }
     collection[state.speciesId] = state;
   }
 

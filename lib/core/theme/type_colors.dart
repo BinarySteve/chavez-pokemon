@@ -23,3 +23,26 @@ Color typeColor(String type) {
     _ => const Color(0xFF61706A),
   };
 }
+
+Color typeForegroundColor(String type) {
+  final background = typeColor(type);
+  final whiteContrast = _contrastRatio(background, Colors.white);
+  final blackContrast = _contrastRatio(background, Colors.black);
+  return whiteContrast >= blackContrast ? Colors.white : Colors.black;
+}
+
+double contrastRatio(Color first, Color second) {
+  return _contrastRatio(first, second);
+}
+
+double _contrastRatio(Color first, Color second) {
+  final firstLuminance = first.computeLuminance();
+  final secondLuminance = second.computeLuminance();
+  final lighter = firstLuminance > secondLuminance
+      ? firstLuminance
+      : secondLuminance;
+  final darker = firstLuminance > secondLuminance
+      ? secondLuminance
+      : firstLuminance;
+  return (lighter + 0.05) / (darker + 0.05);
+}

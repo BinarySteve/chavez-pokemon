@@ -163,6 +163,7 @@ class _PartnerHero extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Open partner ${partner.name}',
+      excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(30),
@@ -255,6 +256,7 @@ class _ProgressCard extends StatelessWidget {
             const SizedBox(height: 18),
             Semantics(
               label: '${controller.seenCount} of $total Pokémon seen',
+              excludeSemantics: true,
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 12,

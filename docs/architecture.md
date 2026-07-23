@@ -36,7 +36,8 @@ SQLite reference data + SQLite user data
 3. `SqliteReferenceRepository` opens that copied database read-only.
 4. `SqliteUserRepository` opens a separate writable trainer database.
 5. `AdventureController` loads both repositories and exposes state to widgets.
-6. UI changes to collection state are saved only in the user database.
+6. Collection changes are written to the user database before the controller
+   publishes the new in-memory state.
 
 Reference-data upgrades therefore do not overwrite trainer progress.
 
@@ -111,17 +112,21 @@ both defending types, including 4× weaknesses, ¼× resistances, and immunities
 - Home
 - Pokédex
 - Collection
-- Gyms
+- Let’s Go Gyms
 
 Phones use `NavigationBar`; wider layouts use `NavigationRail`.
 
-Each Gym expansion tile and nested horizontal helper list has a unique
-`PageStorageKey`. This prevents expansion booleans from colliding with saved
-scroll offsets.
+Each Gym expansion tile has a unique `PageStorageKey`. Helper choices use
+wrapping, natural-height layouts rather than nested horizontal scroll lists.
 
-The current Gym roster and recommendation orchestration live in the UI layer.
-That is manageable for the present fixed guide, but it prevents content-only
-Gym corrections and allows helper candidates outside the Let’s Go roster. The
-next product-correctness phase will move recommendation rules behind a
-testable application/domain boundary without replacing the broader
-architecture.
+The fixed Gym roster facts remain in the UI model.
+`GymRecommendationService` in the application layer calculates
+opponent-specific effective move types and deterministic helper rankings. It
+uses the shared `isLetsGoSpecies` domain predicate, which also powers the
+Pokédex scope. Recommendations require a matching move in the bundled data and
+exclude neutral, resisted, and immune move types.
+
+`AdventureController` owns a per-species pending-write set for collection
+changes. Screens route favorite, status, and automatic Seen writes through one
+failure-handling path. The repository is called first; only a successful write
+changes published collection state.

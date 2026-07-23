@@ -56,20 +56,25 @@ Current coverage includes:
 - reference-database SQLite integrity and foreign keys
 - form artwork existence
 - user profile and collection persistence
+- persistence-first collection writes, failure preservation, and duplicate
+  pending-write suppression
 - onboarding and adaptive navigation
 - All Pokémon and Let’s Go scope switching
 - tap-outside keyboard dismissal
-- Gym helper rendering smoke coverage
+- opponent-isolated Gym recommendation ranking, Let’s Go roster exclusion,
+  move requirements, multipliers, and helper caps
+- Gym helper rendering and target/type labels
 - kid-friendly matchup labels
-- 200% text scaling on the phone Home screen
+- theme and type-badge contrast plus focused semantic labels
+- 200% text scaling on phone and tablet for onboarding, Pokédex, Collection,
+  expanded Gyms, Pokémon details, and form sheets
+- Android detail-route back and modal-sheet back behavior
 
 Not yet covered:
 
 - transactional content activation, interrupted copies, rollback, or recovery
 - trainer-database migrations, backup, or restore
-- collection write failures
 - release-over-release installation and signing identity
-- 200% layouts beyond Home
 - representative-device startup and search performance
 
 ## Build Android APK
@@ -152,9 +157,8 @@ from the mutable cache merely to bypass a missing archive.
 
 ### Gym tab shows a type-cast error
 
-Keep unique `PageStorageKey` values on each Gym `ExpansionTile` and its nested
-helper `ListView`. Reusing storage identity can mix a boolean expansion state
-with a double scroll offset.
+Keep unique `PageStorageKey` values on each Gym `ExpansionTile`. Do not reuse a
+Gym expansion key for another saved scroll or expansion state.
 
 ### Artwork does not appear
 
