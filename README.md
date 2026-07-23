@@ -34,12 +34,14 @@ acquisition step and a network-blocked generation step:
 python tool\acquire_reference_snapshot.py --snapshot-id <snapshot-id>
 python tool\build_reference_data.py validate-snapshot
 python tool\build_reference_data.py build
+python tool\build_reference_data.py build-guide
 ```
 
-Generation writes a validated candidate under `build/reference-data/`; it does
-not replace bundled app content. The current production snapshot was sealed
-from the complete legacy cache with networking disabled and is identified by
-`third_party/source_snapshot.lock.json`. Its large local directory is ignored
+Generation writes validated candidates under `build/reference-data/`; it does
+not replace bundled database or artwork content. The current r2 source snapshot
+preserves the sealed legacy species/artwork inputs and adds Let’s Go encounter
+CSVs pinned to an exact PokéAPI repository commit. It is identified by
+`third_party/source_snapshot.lock.json`; its large local directory is ignored
 by Git and must be retained in the private homelab artifact store plus a second
 backup.
 

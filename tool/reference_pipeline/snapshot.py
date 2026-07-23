@@ -673,6 +673,18 @@ def validate_snapshot(
                 f"No immutable upstream revision recorded for {source.get('name')}.",
             )
 
+    if metadata.get("encounterGuideSource") is not None:
+        try:
+            from .encounters import encounter_source_facts
+
+            report.facts["encounterGuide"] = encounter_source_facts(
+                snapshot,
+                metadata,
+                Path(__file__).with_name("lets_go_progression.json"),
+            )
+        except (OSError, KeyError, TypeError, ValueError, RuntimeError) as error:
+            report.error("encounter_source_invalid", str(error))
+
     report.facts.update(
         {
             "snapshotId": snapshot_id,

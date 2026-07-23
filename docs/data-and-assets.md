@@ -7,6 +7,13 @@ from [PokeAPI](https://pokeapi.co/). Network acquisition caches raw responses
 in `third_party/pokeapi-cache/`, but that mutable cache is not a build input
 after a snapshot is sealed.
 
+Let’s Go encounter records come from the official PokéAPI repository CSV data
+pinned to commit
+`091f3a0599b1efb01f6b502232eeb7d8cbbb3e8f`. The guide retains both game
+versions, location areas, encounter methods, levels, slot rarity, and condition
+identifiers. Runtime Gym suggestions deliberately use only condition-free
+walking encounters.
+
 Base and form artwork comes from URLs exposed by PokeAPI. See
 [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) for licensing and
 distribution restrictions.
@@ -25,6 +32,8 @@ The checked-in, runnable application inputs remain unchanged:
 - 1,025 base artwork files
 - 200 form artwork files
 - dataset version 4 and content schema 1
+- encounter guide schema 1 with 65 areas, 737 grouped encounter records, and
+  130 directly encountered Let’s Go species
 
 Acquisition discovers the current species catalog from PokeAPI instead of
 hard-coding a maximum National Pokédex number.
@@ -37,6 +46,10 @@ The pipeline has three strict responsibilities:
   artwork into a unique incomplete directory, writes provenance and per-file
   SHA-256 values, validates completeness, and only then renames the directory
   to its immutable snapshot ID.
+- `tool/acquire_encounter_snapshot.py` may use HTTPS only to extend a complete
+  immutable snapshot with the exact encounter CSV dependency set from the
+  pinned PokéAPI Git commit. It creates a new snapshot ID and never edits its
+  parent.
 - `tool/build_reference_data.py validate-snapshot` independently checks the
   snapshot format, completion marker, file sizes and hashes, JSON parsing,
   stable IDs, expected counts, required species/evolutions/types, artwork
@@ -46,6 +59,9 @@ The pipeline has three strict responsibilities:
   integrity, foreign keys, tables, metadata, semantic counts, artwork, and
   checksums, then atomically publishes the candidate under
   `build/reference-data/`.
+- `tool/build_reference_data.py build-guide` performs the encounter
+  transformation with sockets blocked and emits a deterministic, independently
+  versioned JSON guide.
 
 Generation never writes `assets/content/`, `assets/artwork/`, or
 `assets/form_artwork/`. Candidate promotion is a separate, deliberate content
@@ -77,11 +93,11 @@ its metadata hash and expected counts. The canonical full snapshot must be
 copied to the private homelab artifact store and a second independent backup.
 Do not edit a finalized snapshot. Acquire a new ID instead.
 
-The current lock selects `2026-07-23-pokeapi-r1`, sealed from the complete
-legacy cache and checked-in artwork with network access disabled. PokeAPI's live
-API does not provide an immutable upstream revision, and individual legacy
-cache entries may have different original acquisition times. These limitations
-are recorded as warnings and require explicit acceptance; they are not hidden.
+The current lock selects `2026-07-23-pokeapi-r2`. It preserves every validated
+r1 input and adds 13 encounter CSV files from the pinned PokéAPI commit. The
+r1 parent remains immutable. PokeAPI’s live species inputs still lack an
+immutable upstream revision and may have mixed acquisition times; the encounter
+CSV extension itself has an exact Git revision.
 
 ## Operator workflow
 
@@ -102,13 +118,26 @@ Build the locked snapshot offline:
 ```powershell
 python tool\build_reference_data.py build --allow-snapshot-warnings
 python tool\build_reference_data.py validate-output `
-  --output build\reference-data\2026-07-23-pokeapi-r1
+  --output build\reference-data\2026-07-23-pokeapi-r2
+python tool\build_reference_data.py build-guide
+python tool\build_reference_data.py validate-guide `
+  --guide build\reference-data\2026-07-23-pokeapi-r2\lets_go_encounters.json
 ```
 
 The warnings flag is required for the current mixed-age legacy snapshot.
 Review the report before using it. The default build compares every ordered
 content table with `assets/content/demo_reference.sqlite` and writes comparison
 JSON and Markdown under the candidate's `reports/` directory.
+
+To recreate the encounter-extended snapshot from an externally restored r1:
+
+```powershell
+python tool\acquire_encounter_snapshot.py `
+  --snapshot-id 2026-07-23-pokeapi-r2
+```
+
+This command is intentionally network-capable. It accepts no moving branch or
+version input; the repository commit is fixed in the acquisition module.
 
 To seal another snapshot from the current cache without network:
 
@@ -178,6 +207,11 @@ hidden-ability flags, move version groups, description language/version
 provenance, numeric upstream form IDs, or structured evolution requirements.
 Those remain targeted schema-hardening work, not reasons to replace SQLite or
 the existing layered architecture.
+
+`assets/guides/lets_go_encounters.json` is not a SQLite schema extension. It is
+a separately versioned bundled guide, so dataset version 4, content schema 1,
+and trainer schema 1 remain unchanged. Its logical hash excludes no source
+fields and is verified before promotion.
 
 ## Candidate review and future promotion
 

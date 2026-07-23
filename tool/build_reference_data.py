@@ -7,8 +7,14 @@ import sys
 from pathlib import Path
 
 from reference_pipeline.common import load_json, sha256_file
+from reference_pipeline.encounters import (
+    EncounterGuideError,
+    validate_encounter_guide,
+    write_encounter_guide,
+)
 from reference_pipeline.generation import (
     GenerationError,
+    OfflineNetworkGuard,
     build_reference_data,
     validate_generated_output,
 )
@@ -80,6 +86,13 @@ def parser() -> argparse.ArgumentParser:
     generated = commands.add_parser("validate-output")
     generated.add_argument("--output", type=Path, required=True)
 
+    guide = commands.add_parser("build-guide")
+    guide.add_argument("--snapshot")
+    guide.add_argument("--output", type=Path)
+
+    validate_guide = commands.add_parser("validate-guide")
+    validate_guide.add_argument("--guide", type=Path, required=True)
+
     report = commands.add_parser("report-snapshot")
     report.add_argument("--snapshot")
     return value
@@ -88,6 +101,11 @@ def parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
+        if args.command == "validate-guide":
+            facts = validate_encounter_guide(load_json(args.guide))
+            print(json.dumps(facts, indent=2, ensure_ascii=False))
+            return 0
+
         if args.command in {"validate-snapshot", "report-snapshot"}:
             snapshot = _snapshot_arg(args.snapshot)
             report = validate_snapshot(snapshot)
@@ -119,6 +137,29 @@ def main(argv: list[str] | None = None) -> int:
 
         snapshot = _snapshot_arg(args.snapshot)
         metadata = load_json(snapshot / "snapshot.json")
+        if args.command == "build-guide":
+            output = args.output or (
+                ROOT
+                / "build"
+                / "reference-data"
+                / metadata["snapshotId"]
+                / "lets_go_encounters.json"
+            )
+            with OfflineNetworkGuard():
+                facts = write_encounter_guide(
+                    snapshot=snapshot,
+                    progression_path=(
+                        ROOT
+                        / "tool"
+                        / "reference_pipeline"
+                        / "lets_go_progression.json"
+                    ),
+                    output=output,
+                )
+            print(json.dumps(facts, indent=2, ensure_ascii=False))
+            print(f"Generated deterministic encounter guide: {output}")
+            return 0
+
         output = args.output or (
             ROOT / "build" / "reference-data" / metadata["snapshotId"]
         )
@@ -147,6 +188,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Generated validated candidate: {result}")
         return 0
     except (
+        EncounterGuideError,
         GenerationError,
         SnapshotValidationError,
         OSError,

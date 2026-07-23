@@ -64,6 +64,7 @@ flutter:
   assets:
     - assets/content/demo_reference.sqlite
     - assets/content/demo_manifest.json
+    - assets/guides/lets_go_encounters.json
     - assets/artwork/
     - assets/form_artwork/
 

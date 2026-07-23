@@ -106,7 +106,10 @@ adb shell monkey -p com.chavezfamily.pokemon_adventure `
 python tool\build_reference_data.py validate-snapshot
 python tool\build_reference_data.py build --allow-snapshot-warnings
 python tool\build_reference_data.py validate-output `
-  --output build\reference-data\2026-07-23-pokeapi-r1
+  --output build\reference-data\2026-07-23-pokeapi-r2
+python tool\build_reference_data.py build-guide
+python tool\build_reference_data.py validate-guide `
+  --guide build\reference-data\2026-07-23-pokeapi-r2\lets_go_encounters.json
 ```
 
 The build command is offline by construction and publishes only to ignored
@@ -118,17 +121,19 @@ revision and the mixed-age legacy cache; review them before passing
 Inspect counts and the previous-dataset comparison:
 
 ```powershell
-Get-Content build\reference-data\2026-07-23-pokeapi-r1\reports\semantic_counts.json
-Get-Content build\reference-data\2026-07-23-pokeapi-r1\reports\comparison.md
+Get-Content build\reference-data\2026-07-23-pokeapi-r2\reports\semantic_counts.json
+Get-Content build\reference-data\2026-07-23-pokeapi-r2\reports\comparison.md
 ```
 
 No network setup is needed for generation: the command installs an in-process
 socket guard and fails if transformation code attempts a connection.
 
-To acquire a new immutable snapshot, use
-`tool/acquire_reference_snapshot.py`. That is the only network-capable
-reference-data command. See [Data and artwork](data-and-assets.md) for the
-full acquisition, archive, recovery, and future-promotion workflow.
+To acquire a new immutable species/artwork snapshot, use
+`tool/acquire_reference_snapshot.py`. To extend a restored r1 snapshot with
+the pinned encounter CSV source, use `tool/acquire_encounter_snapshot.py`.
+These are the only network-capable reference-data commands. See
+[Data and artwork](data-and-assets.md) for the full acquisition, archive,
+recovery, and promotion workflow.
 
 `tool/build_lets_go_data.py` is deprecated and delegates only to offline
 generation. Routine Flutter builds and tests do not require regeneration.
