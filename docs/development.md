@@ -45,6 +45,7 @@ Run all tests:
 
 ```powershell
 flutter test
+python -m unittest discover -s tool\tests -v
 ```
 
 Current coverage includes:
@@ -93,16 +94,38 @@ adb shell monkey -p com.chavezfamily.pokemon_adventure `
   -c android.intent.category.LAUNCHER 1
 ```
 
-## Regenerate data
+## Validate and generate reference-data candidates
 
 ```powershell
-python tool\build_lets_go_data.py
+python tool\build_reference_data.py validate-snapshot
+python tool\build_reference_data.py build --allow-snapshot-warnings
+python tool\build_reference_data.py validate-output `
+  --output build\reference-data\2026-07-23-pokeapi-r1
 ```
 
-This legacy command uses the network for missing cache entries and artwork. It
-is not deterministic and rebuilds `assets/content/demo_reference.sqlite`
-directly. Preserve the current database before an intentional run. Routine
-Flutter builds and tests do not require regeneration.
+The build command is offline by construction and publishes only to ignored
+candidate output under `build/reference-data/`. It does not modify shipping
+assets. The current snapshot warnings describe the lack of a PokeAPI immutable
+revision and the mixed-age legacy cache; review them before passing
+`--allow-snapshot-warnings`.
+
+Inspect counts and the previous-dataset comparison:
+
+```powershell
+Get-Content build\reference-data\2026-07-23-pokeapi-r1\reports\semantic_counts.json
+Get-Content build\reference-data\2026-07-23-pokeapi-r1\reports\comparison.md
+```
+
+No network setup is needed for generation: the command installs an in-process
+socket guard and fails if transformation code attempts a connection.
+
+To acquire a new immutable snapshot, use
+`tool/acquire_reference_snapshot.py`. That is the only network-capable
+reference-data command. See [Data and artwork](data-and-assets.md) for the
+full acquisition, archive, recovery, and future-promotion workflow.
+
+`tool/build_lets_go_data.py` is deprecated and delegates only to offline
+generation. Routine Flutter builds and tests do not require regeneration.
 
 ## Common problems
 
@@ -119,6 +142,13 @@ Then rebuild and reinstall the APK.
 
 Stop the stale Flutter debug or data-generator process, then rerun generation.
 Do not delete trainer data from the emulator.
+
+### Locked source snapshot is missing
+
+Read `third_party/source_snapshot.lock.json`, restore the matching immutable
+directory from the private homelab artifact store or second backup into
+`third_party/source_snapshots/`, then rerun `validate-snapshot`. Do not rebuild
+from the mutable cache merely to bypass a missing archive.
 
 ### Gym tab shows a type-cast error
 

@@ -25,18 +25,26 @@ flutter test
 flutter run
 ```
 
-The checked-in database and artwork are the runnable application inputs. The
-current legacy data tool can rebuild them, but it combines acquisition and
-generation, may contact PokeAPI for missing cache entries or artwork, and is
-not deterministic:
+The checked-in database and artwork are the runnable application inputs.
+Reference-data work is deliberately split into an explicit network-capable
+acquisition step and a network-blocked generation step:
 
 ```powershell
-python tool\build_lets_go_data.py
+python tool\acquire_reference_snapshot.py --snapshot-id <snapshot-id>
+python tool\build_reference_data.py validate-snapshot
+python tool\build_reference_data.py build
 ```
 
-Run that command only when intentionally replacing generated content. It writes
-the bundled reference database directly. The planned pipeline will separate
-network acquisition from an offline deterministic build.
+Generation writes a validated candidate under `build/reference-data/`; it does
+not replace bundled app content. The current production snapshot was sealed
+from the complete legacy cache with networking disabled and is identified by
+`third_party/source_snapshot.lock.json`. Its large local directory is ignored
+by Git and must be retained in the private homelab artifact store plus a second
+backup.
+
+`tool/build_lets_go_data.py` remains only as a deprecated compatibility wrapper
+for the offline build command. It no longer acquires data or writes shipping
+assets.
 
 The generated reference database is stored at
 `assets/content/demo_reference.sqlite`. The filename is retained from the
@@ -56,8 +64,9 @@ original prototype; it now contains the full dataset.
 
 The application is functional for private family use, but release engineering
 is not complete. Android release builds currently use the debug signing
-certificate. The bundled content activator has no validated rollback slot, and
-the data generator is not yet a frozen offline pipeline. See the
+certificate, and the bundled content activator has no validated rollback slot.
+The frozen data pipeline produces candidates only; promotion into bundled
+assets remains an explicit future content-release decision. See the
 [implementation status](docs/implementation-status.md) before preparing an
 update or family-device release.
 

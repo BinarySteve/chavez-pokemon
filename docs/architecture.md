@@ -26,7 +26,7 @@ SQLite reference data + SQLite user data
 | `assets/content/` | bundled reference database and manifest |
 | `assets/artwork/` | base-species artwork |
 | `assets/form_artwork/` | displayed-form artwork |
-| `tool/` | legacy combined data acquisition and generation |
+| `tool/` | separated snapshot acquisition, validation, and offline generation |
 | `test/` | model, repository, persistence, and widget tests |
 
 ## Runtime data flow
@@ -66,6 +66,27 @@ rollback content, and startup recovery before downloaded content uses it.
 
 Content preparation currently happens before `runApp`. A preparation failure
 therefore cannot be displayed by the Flutter error view.
+
+## Build-time reference-data flow
+
+Reference-data tooling is isolated from the Flutter runtime:
+
+```text
+PokeAPI + legacy cache + existing artwork
+                 ↓ explicit acquisition only
+ignored immutable source snapshot + tracked lock
+                 ↓ validated, socket-blocked generation
+ignored candidate + checksums/reports/comparison
+                 ↓ separate future review and promotion
+bundled assets/content + artwork
+```
+
+`tool/acquire_reference_snapshot.py` is the only network-capable entry point.
+`tool/build_reference_data.py` validates one locked snapshot, blocks socket
+connections, creates output in a temporary directory, validates SQLite and
+artwork, then atomically publishes a candidate under `build/`. It never changes
+the active bundled database or artwork. The runtime content activation design
+is unchanged by this build-time pipeline.
 
 ## Domain models
 

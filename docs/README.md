@@ -25,5 +25,6 @@
 | Bundled dataset version | 4 |
 
 The app is Android-first, fully functional offline, and intended for private
-family use. Content activation, deterministic generation, and permanent
-release signing remain continuation work.
+family use. Deterministic candidate generation is implemented. Transactional
+runtime content activation and permanent release signing remain continuation
+work.

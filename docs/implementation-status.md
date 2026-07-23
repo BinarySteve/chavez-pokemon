@@ -2,6 +2,114 @@
 
 Verified against the repository on 2026-07-23.
 
+## Completed phase: frozen reference-data pipeline
+
+Purpose: separate network acquisition from deterministic reference-data
+generation while preserving the installed Flutter application and current
+bundled dataset.
+
+Previous behavior:
+
+- `tool/build_lets_go_data.py` mixes PokeAPI acquisition, mutable cache reads,
+  artwork downloading, transformations, SQLite generation, and direct output
+  replacement;
+- cache entries are named from URL paths and query strings, usually retaining
+  endpoint and numeric stable IDs, but have no snapshot-wide completeness or
+  checksum contract;
+- missing cache entries trigger HTTP requests;
+- malformed or truncated cached JSON fails when parsed, while stale but
+  parseable responses are accepted without age or revision checks;
+- existing artwork is accepted by filename without an integrity check; and
+- current cache plus artwork is complete enough to reproduce the shipping
+  semantic data without networking.
+
+Implemented behavior:
+
+- network access exists only in an explicit acquisition command;
+- acquisition writes and validates an incomplete temporary directory before
+  promoting one immutable, versioned source snapshot;
+- snapshot metadata inventories and hashes every required record and artwork
+  file;
+- deterministic generation validates an explicit snapshot, blocks network
+  access, writes temporary outputs, validates them, and only then publishes a
+  candidate output directory;
+- generated reports record provenance, checksums, semantic counts, and
+  comparisons; and
+- a failed acquisition or generation never replaces a finalized snapshot or
+  existing generated output.
+
+Expected repository changes:
+
+- Python acquisition, snapshot-validation, deterministic-generation, and
+  reporting modules under `tool/`;
+- small Python test fixtures and tests;
+- a source-snapshot lock/provenance record;
+- `.gitignore`, README, data/development documentation, and generator
+  references; and
+- generated candidate reports under ignored build output during validation.
+
+Must not change:
+
+- `assets/content/demo_reference.sqlite`;
+- `assets/content/demo_manifest.json`;
+- `assets/artwork/` and `assets/form_artwork/`;
+- Flutter runtime, navigation, UI, controller, repository, or trainer-storage
+  behavior; and
+- dataset version 4 or content schema 1.
+
+Compatibility risks:
+
+- transformation drift could change semantic rows even when counts remain
+  equal;
+- a mixed-age legacy cache can be sealed only with an explicit review warning;
+- physical SQLite bytes can vary across SQLite versions even when ordered
+  logical rows match; and
+- generated metadata gains provenance fields, so a candidate database can
+  differ from the active database without requiring a dataset-version increase
+  when displayed content remains identical.
+
+Validation:
+
+- Python unit and integration tests with small snapshots;
+- independent production-snapshot validation;
+- deterministic generation while socket access is blocked;
+- generated SQLite integrity and foreign-key checks;
+- semantic counts and artwork mappings;
+- table-level logical comparison with the active database;
+- Dart formatting, Flutter analysis and tests; and
+- Android debug build.
+
+Exit criteria:
+
+- complete snapshots can be explicitly acquired, independently validated, and
+  archived outside Git;
+- missing/corrupt required files fail clearly;
+- offline generation succeeds from a complete snapshot;
+- repeated builds have stable logical output;
+- failed builds preserve existing output;
+- generated metadata identifies source snapshot and generator;
+- current production semantic counts remain unchanged; and
+- active bundled content and trainer data remain untouched.
+
+Completion evidence:
+
+- snapshot `2026-07-23-pokeapi-r1` validates with 4,814 declared source files,
+  including 1,025 species records, 1,025 default Pokémon records, 200 form
+  records, 795 move records, 541 evolution chains, and 1,225 artwork mappings;
+- its tracked lock records metadata SHA-256
+  `e4ed549a1f79d3596ce4ee392a4f391766d754fe1c0716e43a27ae1354a579e2`;
+- the production-sized candidate builds with network access blocked;
+- generated SQLite integrity and foreign-key checks pass;
+- all eight content-table hashes match the active bundled database, with
+  logical SHA-256
+  `9ed71871e2fd31e00196f3fcc0f49ac4c7e8435e83989b309ae8c99568ab4160`;
+- repeated production and fixture builds produce the same logical database;
+  both were also byte-identical on the verified Windows/SQLite toolchain;
+- malformed, missing, corrupt, incomplete, and duplicate-ID fixtures fail;
+- failed generation preserves an existing output; and
+- the shipping reference database remains SHA-256
+  `35a5cffc50f115ba1c80d860be43ec9ec8a12a248a186b2e61f1b96247170319`.
+
 ## Working private-family application
 
 - Flutter 3.44.4 and Dart 3.12.2 match package constraints.
@@ -58,20 +166,20 @@ sealed or immutable source snapshot.
 
 ## Data-pipeline limits
 
-`tool/build_lets_go_data.py` is a legacy combined acquisition/build command:
+- PokeAPI's live API exposes no immutable upstream revision for the sealed
+  legacy inputs.
+- Legacy cache files may have different original acquisition times. This is a
+  recorded, explicit-acceptance warning.
+- The full immutable snapshot is too large for Git and must still be copied to
+  the homelab artifact store and a second backup.
+- Logical output is deterministic for a snapshot/tool version. Physical SQLite
+  bytes are not promised across different SQLite library versions.
+- Candidate promotion into shipping assets is deliberately absent.
+- Current schema 1 still omits hidden-ability, move-version, description-source,
+  upstream-form-ID, and structured-evolution metadata.
 
-- cache misses trigger live network requests;
-- existing artwork is accepted without a checksum;
-- cached responses can come from different acquisition times;
-- output metadata includes the current build time;
-- the shipping database is replaced directly before final validation; and
-- no source manifest records completeness, checksums, upstream revision,
-  attribution bundle, or immutable snapshot identity.
-
-The command is useful for the current private workspace but is not a
-deterministic release pipeline. The former `tool/generate_demo_db.dart`
-prototype was removed because it could overwrite the shipping database with an
-obsolete, runtime-incompatible schema.
+`tool/build_lets_go_data.py` is now a deprecated offline wrapper.
+`tool/generate_demo_db.dart` remains removed.
 
 ## Release and distribution limits
 
@@ -87,6 +195,6 @@ obsolete, runtime-incompatible schema.
 ## Next implementation boundary
 
 Next code phase corrects current child-guidance and persistence behavior.
-Deterministic data acquisition/build, schema hardening, transactional content
-activation, homelab updates, and permanent APK signing remain separate later
-phases. Do not combine them into one migration.
+Schema hardening, transactional content activation, homelab updates, and
+permanent APK signing remain separate later phases. Do not combine them into
+one migration.

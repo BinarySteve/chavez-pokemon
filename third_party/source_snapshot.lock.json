@@ -1,0 +1,58 @@
+{
+  "acquisitionToolVersion": "1.0.0",
+  "createdAtUtc": "2026-07-23T19:21:57.116717Z",
+  "expectedCounts": {
+    "abilities": 302,
+    "artwork": {
+      "base": 1025,
+      "forms": 200
+    },
+    "defaultPokemon": 1025,
+    "evolutionChains": 541,
+    "forms": 200,
+    "moves": 795,
+    "pokemonRecords": 1225,
+    "species": 1025,
+    "types": 18
+  },
+  "highestNationalDexNumber": 1025,
+  "knownOmissions": [
+    "PokeAPI live API does not expose an immutable source revision.",
+    "Legacy cache entries may have different original acquisition times."
+  ],
+  "languages": [
+    "en"
+  ],
+  "licenses": [
+    {
+      "name": "PokéAPI BSD 3-Clause",
+      "reference": "licenses/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "name": "Pokémon artwork rights notice",
+      "reference": "licenses/THIRD_PARTY_NOTICES.md"
+    }
+  ],
+  "manualCorrections": [],
+  "relativeSnapshotPath": "third_party/source_snapshots/2026-07-23-pokeapi-r1",
+  "sourceAcquiredAtUtc": "2026-07-23T17:33:04Z",
+  "sources": [
+    {
+      "baseLocation": "https://pokeapi.co/api/v2",
+      "catalogFile": "records/catalog/pokemon-species-limit-100000.json",
+      "catalogResultCount": 1025,
+      "catalogUrl": "https://pokeapi.co/api/v2/pokemon-species?limit=100000",
+      "name": "PokeAPI",
+      "revision": null
+    },
+    {
+      "baseLocation": "URLs embedded in PokeAPI Pokémon records",
+      "name": "PokeAPI sprites",
+      "revision": null
+    }
+  ],
+  "snapshotFormatVersion": 1,
+  "snapshotId": "2026-07-23-pokeapi-r1",
+  "snapshotMetadataSha256": "e4ed549a1f79d3596ce4ee392a4f391766d754fe1c0716e43a27ae1354a579e2",
+  "storagePolicy": "Snapshot directory is ignored by Git and must be archived to the private homelab plus a second backup."
+}
