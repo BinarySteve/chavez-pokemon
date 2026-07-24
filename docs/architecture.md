@@ -41,6 +41,10 @@ SQLite reference data + SQLite user data
 
 Reference-data upgrades therefore do not overwrite trainer progress.
 
+Partner changes replace the single `trainer_profile` row with the same trainer
+name and avatar plus a new `partner_species_id`. Collection and activity tables
+are not modified.
+
 ## Reference storage
 
 The bundled manifest contains a monotonically increasing `datasetVersion`.
@@ -138,9 +142,31 @@ an empty guide without setting the app error, preserving caught-only guidance
 and offline startup.
 
 `AdventureController` owns a per-species pending-write set for collection
-changes. Screens route favorite, status, and automatic Seen writes through one
-failure-handling path. The repository is called first; only a successful write
-changes published collection state.
+changes. Screens route favorite and child-selected status writes through one
+failure-handling path. Merely opening or browsing a Pokémon entry never changes
+its Seen status. The repository is called first; only a successful write changes
+published collection state.
+
+## Homelab app updates
+
+`HomelabAppUpdateService` reads an optional build-time
+`APP_UPDATE_MANIFEST_URL`. It compares the manifest's Android version code with
+the installed app, downloads newer APKs into private application storage, and
+verifies the declared byte count and SHA-256 checksum before exposing the file
+to Android through a narrow platform channel. APK URLs must remain on the
+manifest's HTTPS origin.
+
+The native bridge accepts only `.apk` files inside the private `files/updates`
+directory. Android's package installer remains responsible for install-source
+permission, signing-certificate validation, version-code validation, and final
+adult confirmation. Update-server failure never blocks bundled data or offline
+startup.
+
+The server side is deliberately static: an unprivileged Nginx container at
+`C:\docker\pokemon-adventure-updates` mounts a release directory read-only.
+Unlike Lift Ledger, this app has no authentication or server database, so an
+authenticated API would add failure modes without adding update trust. Android
+signing identity remains the final authority.
 
 ## Adventure activities
 

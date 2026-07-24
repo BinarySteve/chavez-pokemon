@@ -25,19 +25,6 @@ class PokemonDetailScreen extends StatefulWidget {
 
 class _PokemonDetailScreenState extends State<PokemonDetailScreen> {
   @override
-  void initState() {
-    super.initState();
-    final state = widget.controller.collectionFor(widget.pokemon.id);
-    if (!state.isSeen) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          unawaited(_saveCollection(state.copyWith(isSeen: true)));
-        }
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: widget.controller,
@@ -426,6 +413,11 @@ class _EvolutionCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 4),
+            Text(
+              'Tap a Pokémon to open its details.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             const SizedBox(height: 12),
             for (final edge in edges)
               _EvolutionRoute(
@@ -456,36 +448,261 @@ class _EvolutionRoute extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: _SpeciesLink(pokemon: from, onOpen: onOpen),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Column(
-              children: [
-                const Icon(Icons.arrow_forward_rounded),
-                const SizedBox(height: 2),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 170),
-                  child: Text(
-                    condition,
-                    style: Theme.of(context).textTheme.labelSmall,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 560;
+        final colorScheme = Theme.of(context).colorScheme;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Material(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(18),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: compact
+                  ? Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _SpeciesLink(
+                                pokemon: from,
+                                onOpen: onOpen,
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              color: colorScheme.primary,
+                            ),
+                            Expanded(
+                              child: _SpeciesLink(pokemon: to, onOpen: onOpen),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 18),
+                        _EvolutionCondition(condition: condition),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: _SpeciesLink(pokemon: from, onOpen: onOpen),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.arrow_forward_rounded,
+                                color: colorScheme.primary,
+                              ),
+                              const SizedBox(height: 6),
+                              _EvolutionCondition(condition: condition),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _SpeciesLink(pokemon: to, onOpen: onOpen),
+                        ),
+                      ],
+                    ),
             ),
           ),
-          Expanded(
-            child: _SpeciesLink(pokemon: to, onOpen: onOpen),
+        );
+      },
+    );
+  }
+}
+
+class _EvolutionCondition extends StatelessWidget {
+  const _EvolutionCondition({required this.condition});
+
+  final String condition;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = condition
+        .replaceAll(RegExp(r'\bat at\b', caseSensitive: false), 'at')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim()
+        .split(RegExp(r'\s+or\s+', caseSensitive: false));
+    if (options.length > 1) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              Icon(
+                Icons.auto_awesome_rounded,
+                size: 18,
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
+              Text(
+                'Ways to evolve',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
           ),
+          const SizedBox(height: 6),
+          for (final option in options)
+            Padding(
+              padding: const EdgeInsets.only(left: 26, bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('• '),
+                  Expanded(
+                    child: Text(
+                      option,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.auto_awesome_rounded,
+          size: 18,
+          color: Theme.of(context).colorScheme.tertiary,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(
+                  text: 'How: ',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                TextSpan(text: options.single),
+              ],
+            ),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MoveList extends StatelessWidget {
+  const _MoveList({required this.moves});
+
+  final List<PokemonMove> moves;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 620 ? 2 : 1;
+        const spacing = 8.0;
+        final width =
+            (constraints.maxWidth - (columns - 1) * spacing) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final move in moves)
+              SizedBox(
+                width: width,
+                child: _MoveRow(move: move),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MoveRow extends StatelessWidget {
+  const _MoveRow({required this.move});
+
+  final PokemonMove move;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+    final learnLabel = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        _learnLabel(move),
+        style: Theme.of(context).textTheme.labelMedium,
+        textAlign: TextAlign.center,
       ),
     );
+    final moveName = Text(
+      move.name,
+      style: Theme.of(context).textTheme.bodyLarge,
+    );
+    return Semantics(
+      label: '${move.name}, ${move.type} type, ${_learnLabel(move)}',
+      excludeSemantics: true,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 52),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: largeText
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      TypeBadge(type: move.type, compact: true),
+                      learnLabel,
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  moveName,
+                ],
+              )
+            : Row(
+                children: [
+                  TypeBadge(type: move.type, compact: true),
+                  const SizedBox(width: 10),
+                  Expanded(child: moveName),
+                  const SizedBox(width: 8),
+                  learnLabel,
+                ],
+              ),
+      ),
+    );
+  }
+
+  static String _learnLabel(PokemonMove move) {
+    if (move.learnMethod == 'level-up') {
+      return move.levelLearned == 0 ? 'Start' : 'Lv. ${move.levelLearned}';
+    }
+    return switch (move.learnMethod) {
+      'machine' => 'TM',
+      'tutor' => 'Tutor',
+      'egg' => 'Egg',
+      _ => 'Other',
+    };
   }
 }
 
@@ -751,37 +968,13 @@ class _MovesCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final move in levelMoves)
-                  Chip(
-                    avatar: TypeBadge(type: move.type, compact: true),
-                    label: Text(
-                      move.levelLearned == 0
-                          ? '${move.name} · learned on evolution/start'
-                          : '${move.name} · Lv. ${move.levelLearned}',
-                    ),
-                  ),
-              ],
-            ),
+            _MoveList(moves: levelMoves),
           ],
           if (otherMoves.isNotEmpty) ...[
             const SizedBox(height: 14),
             Text('TM or tutor', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final move in otherMoves)
-                  Chip(
-                    avatar: TypeBadge(type: move.type, compact: true),
-                    label: Text(move.name),
-                  ),
-              ],
-            ),
+            _MoveList(moves: otherMoves),
           ],
         ],
       ),

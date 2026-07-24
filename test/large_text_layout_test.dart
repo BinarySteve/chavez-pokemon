@@ -136,6 +136,43 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Open Pikachu'), findsOneWidget);
   });
+
+  testWidgets('phone detail keeps evolution directions and moves readable', (
+    tester,
+  ) async {
+    _configureView(tester, const Size(430, 932));
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    await controller.initialize();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(useMaterial3: true),
+        home: PokemonDetailScreen(
+          controller: controller,
+          pokemon: controller.speciesById(133)!,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Evolution paths'), 350);
+    await tester.pumpAndSettle();
+    expect(find.text('Tap a Pokémon to open its details.'), findsOneWidget);
+    expect(find.text('Ways to evolve'), findsOneWidget);
+    expect(find.text('Level up at a special mossy place'), findsOneWidget);
+    expect(find.text('Use Leaf Stone'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.ensureVisible(find.text('Moves'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Moves'));
+    await tester.pumpAndSettle();
+    expect(find.text('Normal'), findsWidgets);
+    expect(find.text('Lv. 10'), findsOneWidget);
+    expect(find.text('TM'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 void _selectDestination(WidgetTester tester, int index) {
@@ -287,7 +324,49 @@ class _ReferenceFake implements ReferenceRepository {
       types: ['Normal'],
       abilities: [],
       forms: [],
-      evolutionEdges: [],
+      evolutionEdges: [
+        EvolutionEdge(
+          fromSpeciesId: 133,
+          toSpeciesId: 134,
+          condition: 'Level up at at a special mossy place or Use Leaf Stone',
+          sortOrder: 1,
+        ),
+      ],
+      moves: [
+        PokemonMove(
+          name: 'Double Kick',
+          type: 'Normal',
+          learnMethod: 'level-up',
+          levelLearned: 10,
+        ),
+        PokemonMove(
+          name: 'Protect',
+          type: 'Normal',
+          learnMethod: 'machine',
+          levelLearned: 0,
+        ),
+      ],
+    ),
+    PokemonSpecies(
+      id: 134,
+      dexNumber: 134,
+      name: 'Vaporeon',
+      classification: 'Bubble Jet Pokémon',
+      description: 'Fixture',
+      heightMeters: 1,
+      weightKilograms: 29,
+      generation: 1,
+      types: ['Water'],
+      abilities: [],
+      forms: [],
+      evolutionEdges: [
+        EvolutionEdge(
+          fromSpeciesId: 133,
+          toSpeciesId: 134,
+          condition: 'Level up at at a special mossy place or Use Leaf Stone',
+          sortOrder: 1,
+        ),
+      ],
     ),
     PokemonSpecies(
       id: 906,

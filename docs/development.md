@@ -59,6 +59,7 @@ Current coverage includes:
 - persistence-first collection writes, failure preservation, and duplicate
   pending-write suppression
 - onboarding and adaptive navigation
+- searchable partner changes and profile persistence
 - All Pokémon and Let’s Go scope switching
 - tap-outside keyboard dismissal
 - opponent-isolated Gym recommendation ranking, Let’s Go roster exclusion,
@@ -89,6 +90,11 @@ Not yet covered:
 - release-over-release installation and signing identity
 - representative-device startup and search performance
 
+Homelab update coverage verifies newer/current manifest decisions, streamed APK
+download, progress, exact byte count, SHA-256 rejection, Android installer
+handoff, and the child-facing grown-up prompt. See
+[Homelab app updates](homelab-updates.md) for publishing and device setup.
+
 ## Build Android APK
 
 ```powershell
@@ -97,10 +103,12 @@ flutter build apk --debug
 
 The debug APK is large because 1,225 artwork files are bundled for offline use.
 
-A release APK also builds, but `android/app/build.gradle.kts` currently signs
-the release build with the Android debug certificate. Do not treat that APK as
-the permanent family-device release identity. Establish and back up a
-permanent release key before a durable update chain begins.
+A release APK also builds. `android/app/build.gradle.kts` uses the permanent
+family key when all `POKEMON_KEYSTORE_*` environment variables are set and
+otherwise falls back to the Android debug certificate for local testing. Do not
+treat a fallback build as the permanent family-device release identity.
+Establish and back up a permanent release key before a durable update chain
+begins.
 
 Install and launch on the current emulator:
 

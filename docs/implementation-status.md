@@ -293,8 +293,9 @@ sealed or immutable source snapshot.
 - Malformed pointers and missing active files have no automatic recovery.
 - Content preparation runs before `runApp`, so its failures cannot reach the
   friendly Flutter error screen.
-- `BundledUpdateService` compares only the bundled manifest. It does not
-  download or activate content.
+- `HomelabAppUpdateService` detects and downloads newer private APK releases,
+  verifies exact size and SHA-256, and hands only a verified private file to
+  Android's installer. It does not replace reference content independently.
 - Trainer database now has an explicit v1-to-v2 migration and fail-closed
   downgrade handling, but still has no backup or restore workflow.
 - Startup and search performance have no representative-device budget.
@@ -318,9 +319,10 @@ sealed or immutable source snapshot.
 
 ## Release and distribution limits
 
-- Android `release` currently uses the debug signing certificate.
-- No permanent keystore injection, backup, certificate record, release
-  runbook, or release-over-release installation test exists.
+- Android `release` supports environment-injected family keystore credentials
+  and falls back to the debug certificate when they are absent.
+- No permanent family key, backup, certificate record, or completed
+  release-over-release family-device test exists.
 - Changing from a debug certificate to a permanent certificate requires
   preserving trainer data before reinstalling.
 - Public distribution is not approved. Pokémon names, designs, and artwork
@@ -332,5 +334,5 @@ sealed or immutable source snapshot.
 Stabilize and observe the first Adventure Camp pack before adding more reward
 systems. A later child-facing slice may add structured real-game collection
 quests. Targeted reference-schema hardening, transactional content activation,
-homelab updates, trainer backup/restore, and permanent APK signing remain
-separate technical phases.
+trainer backup/restore, permanent APK signing, and release-over-release device
+validation remain separate technical phases.

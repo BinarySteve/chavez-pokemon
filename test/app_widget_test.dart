@@ -60,6 +60,79 @@ void main() {
     expect(find.text('Let’s Go Gyms'), findsOneWidget);
   });
 
+  testWidgets('trainer can change partner from Home', (tester) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final userRepository = _UserFake(
+      profile: const TrainerProfile(
+        name: 'Nova',
+        avatar: 'star',
+        partnerSpeciesId: 25,
+      ),
+    );
+    final controller = AdventureController(
+      referenceRepository: _ReferenceFake(),
+      userRepository: userRepository,
+      updateService: _UpdateFake(),
+    );
+
+    await tester.pumpWidget(AdventureApp(controller: controller));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change partner'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose a new partner'), findsOneWidget);
+    expect(find.text('Current partner'), findsOneWidget);
+    await tester.tap(find.text('Sprigatito'));
+    await tester.pumpAndSettle();
+
+    expect(controller.partner?.id, 906);
+    expect(userRepository.profile?.partnerSpeciesId, 906);
+    expect(find.text('Sprigatito'), findsWidgets);
+  });
+
+  testWidgets('new app release gets a kid-friendly grown-up update prompt', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(430, 932);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final updateService = _AppUpdateFake();
+    final controller = AdventureController(
+      referenceRepository: _ReferenceFake(),
+      userRepository: _UserFake(
+        profile: const TrainerProfile(
+          name: 'Nova',
+          avatar: 'star',
+          partnerSpeciesId: 25,
+        ),
+      ),
+      updateService: updateService,
+    );
+
+    await tester.pumpWidget(AdventureApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    expect(find.text('More Pokémon fun'), findsOneWidget);
+    expect(
+      find.text('A new version is ready to join the team!'),
+      findsOneWidget,
+    );
+    expect(find.text('Update with a grown-up'), findsOneWidget);
+    await tester.tap(find.text('Update with a grown-up'));
+    await tester.pumpAndSettle();
+
+    expect(
+      controller.appUpdateActionState,
+      AppUpdateActionState.openingInstaller,
+    );
+    expect(updateService.installRequests, 1);
+    expect(find.text('A new adventure is ready!'), findsOneWidget);
+  });
+
   testWidgets('returning trainer gets navigation rail on tablet', (
     tester,
   ) async {
@@ -211,7 +284,33 @@ void main() {
     expect(find.text('No matching caught helper yet.'), findsWidgets);
   });
 
-  testWidgets('collection save failure keeps saved state and offers retry', (
+  testWidgets('opening details does not automatically mark Pokemon as seen', (
+    tester,
+  ) async {
+    final user = _UserFake();
+    final controller = AdventureController(
+      referenceRepository: _ReferenceFake(),
+      userRepository: user,
+      updateService: _UpdateFake(),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PokemonDetailScreen(
+          controller: controller,
+          pokemon: _ReferenceFake.pikachu,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(controller.collectionFor(25).isSeen, isFalse);
+    expect(user.collection.containsKey(25), isFalse);
+    expect(find.text('Seen'), findsOneWidget);
+  });
+
+  testWidgets('manual collection save failure keeps state and offers retry', (
     tester,
   ) async {
     final user = _UserFake(saveError: StateError('disk full'));
@@ -230,8 +329,9 @@ void main() {
         ),
       ),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Seen'));
+    await tester.pumpAndSettle();
 
     expect(
       find.text('We couldn’t save that change. Your collection is still safe.'),
@@ -560,5 +660,44 @@ class _UpdateFake implements UpdateService {
       state: UpdateCheckState.current,
       message: 'Demo content is current.',
     );
+  }
+}
+
+class _AppUpdateFake implements AppUpdateService {
+  static final release = AppUpdateRelease(
+    versionCode: 2,
+    versionName: '1.1.0',
+    apkUri: Uri.parse('https://home.example/pokemon-adventure.apk'),
+    sha256: '0' * 64,
+    sizeBytes: 1024,
+    title: 'More Pokémon fun',
+    notes: const ['New discoveries', 'A friendlier update screen'],
+  );
+
+  int installRequests = 0;
+
+  @override
+  Future<UpdateCheckResult> check({required int currentDatasetVersion}) async {
+    return UpdateCheckResult(
+      state: UpdateCheckState.updateAvailable,
+      message: 'A new adventure is ready!',
+      release: release,
+    );
+  }
+
+  @override
+  Future<String> download(
+    AppUpdateRelease release, {
+    required void Function(double progress) onProgress,
+  }) async {
+    onProgress(0.5);
+    onProgress(1);
+    return 'verified-update.apk';
+  }
+
+  @override
+  Future<UpdateInstallRequest> requestInstall(String apkPath) async {
+    installRequests += 1;
+    return UpdateInstallRequest.launched;
   }
 }

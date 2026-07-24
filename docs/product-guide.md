@@ -10,9 +10,14 @@ connection after installation.
 
 - greets the local trainer
 - shows the selected partner
+- provides a visible **Change partner** action
 - tracks Seen, Caught, and Favorite totals
 - suggests a Pokémon to discover
 - rotates a Pokémon of the day
+
+The partner picker searches the complete Pokédex by name, form, or number.
+Changing partners preserves the trainer name, avatar, collection, stickers, and
+activity progress.
 
 ### Pokédex
 
@@ -65,6 +70,9 @@ can mark a species as:
 - Favorite
 - Shiny
 - Want to Find
+
+Opening a Pokémon entry does not mark it Seen. The child chooses Seen herself
+from the My adventure controls.
 
 The app waits for the local trainer database to save a change before updating
 the control. While that species is saving, its collection controls are

@@ -11,6 +11,14 @@ import '../domain/models/trainer_profile.dart';
 import '../domain/repositories.dart';
 import 'mini_adventure_service.dart';
 
+enum AppUpdateActionState {
+  idle,
+  downloading,
+  waitingForPermission,
+  openingInstaller,
+  failed,
+}
+
 class AdventureController extends ChangeNotifier {
   AdventureController({
     required this.referenceRepository,
@@ -54,6 +62,10 @@ class AdventureController extends ChangeNotifier {
   bool _isActivityCompletionPending = false;
   Object? _activityError;
   final Set<int> _pendingCollectionUpdates = {};
+  AppUpdateActionState _appUpdateActionState = AppUpdateActionState.idle;
+  double _appUpdateDownloadProgress = 0;
+  String? _appUpdateActionMessage;
+  String? _downloadedUpdatePath;
 
   List<PokemonSpecies> get species => _species;
   TrainerProfile? get profile => _profile;
@@ -67,6 +79,9 @@ class AdventureController extends ChangeNotifier {
   bool get isActivityReady => _isActivityReady;
   bool get isActivityCompletionPending => _isActivityCompletionPending;
   Object? get activityError => _activityError;
+  AppUpdateActionState get appUpdateActionState => _appUpdateActionState;
+  double get appUpdateDownloadProgress => _appUpdateDownloadProgress;
+  String? get appUpdateActionMessage => _appUpdateActionMessage;
   String get todayActivityId =>
       'daily-v${MiniAdventureService.algorithmVersion}-'
       '${MiniAdventureService.formatLocalDate(_clock())}';
@@ -209,6 +224,31 @@ class AdventureController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> changePartner(int partnerSpeciesId) async {
+    final current = _profile;
+    if (current == null) {
+      throw StateError('A trainer profile is required to choose a partner.');
+    }
+    if (speciesById(partnerSpeciesId) == null) {
+      throw ArgumentError.value(
+        partnerSpeciesId,
+        'partnerSpeciesId',
+        'Partner must exist in the active Pokédex.',
+      );
+    }
+    if (current.partnerSpeciesId == partnerSpeciesId) {
+      return;
+    }
+    final updated = TrainerProfile(
+      name: current.name,
+      avatar: current.avatar,
+      partnerSpeciesId: partnerSpeciesId,
+    );
+    await userRepository.saveProfile(updated);
+    _profile = updated;
+    notifyListeners();
+  }
+
   Future<void> updateCollection(CollectionState state) async {
     if (_pendingCollectionUpdates.contains(state.speciesId)) {
       return;
@@ -235,6 +275,80 @@ class AdventureController extends ChangeNotifier {
     _updateResult = await updateService.check(
       currentDatasetVersion: datasetVersion,
     );
+    notifyListeners();
+  }
+
+  Future<void> beginAppUpdate() async {
+    final service = updateService;
+    final release = _updateResult.release;
+    if (service is! AppUpdateService || release == null) {
+      _appUpdateActionState = AppUpdateActionState.failed;
+      _appUpdateActionMessage = 'This update is not ready to download.';
+      notifyListeners();
+      return;
+    }
+
+    _appUpdateActionState = AppUpdateActionState.downloading;
+    _appUpdateDownloadProgress = 0;
+    _appUpdateActionMessage = 'Downloading the new adventure…';
+    notifyListeners();
+    try {
+      var lastPublishedProgress = 0.0;
+      _downloadedUpdatePath = await service.download(
+        release,
+        onProgress: (progress) {
+          final safeProgress = progress.clamp(0.0, 1.0);
+          if (safeProgress < 1 && safeProgress - lastPublishedProgress < 0.01) {
+            return;
+          }
+          lastPublishedProgress = safeProgress;
+          _appUpdateDownloadProgress = safeProgress;
+          notifyListeners();
+        },
+      );
+      await _requestDownloadedUpdateInstall(service);
+    } on Object catch (error, stackTrace) {
+      debugPrint('App update preparation failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _appUpdateActionState = AppUpdateActionState.failed;
+      _appUpdateActionMessage =
+          'The update could not be prepared. Nothing changed—try again later.';
+      notifyListeners();
+    }
+  }
+
+  Future<void> continueAppUpdate() async {
+    final service = updateService;
+    if (service is! AppUpdateService || _downloadedUpdatePath == null) {
+      await beginAppUpdate();
+      return;
+    }
+    try {
+      await _requestDownloadedUpdateInstall(service);
+    } on Object catch (error, stackTrace) {
+      debugPrint('App update installer launch failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      _appUpdateActionState = AppUpdateActionState.failed;
+      _appUpdateActionMessage =
+          'Android could not open the update. The current app is still safe.';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _requestDownloadedUpdateInstall(AppUpdateService service) async {
+    final request = await service.requestInstall(_downloadedUpdatePath!);
+    switch (request) {
+      case UpdateInstallRequest.launched:
+        _appUpdateActionState = AppUpdateActionState.openingInstaller;
+        _appUpdateActionMessage =
+            'Finish the update on Android’s confirmation screen.';
+        break;
+      case UpdateInstallRequest.permissionNeeded:
+        _appUpdateActionState = AppUpdateActionState.waitingForPermission;
+        _appUpdateActionMessage =
+            'A grown-up must allow installs from this app, then come back.';
+        break;
+    }
     notifyListeners();
   }
 

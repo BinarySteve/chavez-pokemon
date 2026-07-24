@@ -17,8 +17,12 @@ getting kid-friendly help with **Pokémon: Let’s Go, Pikachu!** and
   pre-Gym walking encounter suggestions
 - Adventure Camp with daily mini adventures, no-pressure Free Play, and a
   153-slot Sticker Scrapbook
-- local trainer profile, favorites, Seen, Caught, Shiny, and Want to Find
-- 1,225 bundled images and no runtime internet requirement
+- local trainer profile plus child-controlled Favorites, Seen, Caught, Shiny,
+  and Want to Find tracking (browsing never marks a Pokémon Seen)
+- searchable partner selection that can be changed anytime from Home
+- optional homelab APK updates with a kid-friendly grown-up prompt, download
+  progress, SHA-256 verification, and Android install confirmation
+- 1,225 bundled images; internet is optional and used only for homelab updates
 
 ## Quick start
 
@@ -62,18 +66,20 @@ original prototype; it now contains the full dataset.
 - [Architecture](docs/architecture.md)
 - [Data and artwork pipeline](docs/data-and-assets.md)
 - [Development and testing](docs/development.md)
+- [Homelab app updates](docs/homelab-updates.md)
 - [Implementation status](docs/implementation-status.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## Current release status
 
-The application is functional for private family use, but release engineering
-is not complete. Android release builds currently use the debug signing
-certificate, and the bundled content activator has no validated rollback slot.
-The frozen data pipeline produces candidates only; promotion into bundled
-assets remains an explicit future content-release decision. See the
-[implementation status](docs/implementation-status.md) before preparing an
-update or family-device release.
+The permanent family signing chain and private homelab update endpoint are
+established. Family releases must keep using the existing keystore and must
+increase the Android version code every time. Release builds still fall back to
+the debug certificate when signing credentials are absent, but the combined
+homelab release script rejects that certificate before publishing. Maintaining
+encrypted, offline keystore backups remains essential. See
+[Homelab app updates](docs/homelab-updates.md) for the repeatable release
+workflow.
 
 ## Distribution warning
 
