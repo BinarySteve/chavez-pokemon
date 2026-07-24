@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
-import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -72,6 +72,7 @@ class HomelabAppUpdateService implements AppUpdateService {
     AppUpdatePlatform? platform,
     HttpClient Function()? httpClientFactory,
     Future<Directory> Function()? supportDirectory,
+    this.downloadChunkBytes = _defaultDownloadChunkBytes,
   }) : _platform = platform ?? AndroidAppUpdatePlatform(),
        _httpClientFactory = httpClientFactory ?? HttpClient.new,
        _supportDirectory = supportDirectory ?? getApplicationSupportDirectory;
@@ -79,11 +80,13 @@ class HomelabAppUpdateService implements AppUpdateService {
   static const packageName = 'com.chavezfamily.pokemon_adventure';
   static const _maximumManifestBytes = 128 * 1024;
   static const _maximumApkBytes = 750 * 1024 * 1024;
+  static const _defaultDownloadChunkBytes = 8 * 1024 * 1024;
 
   final String _manifestUrl;
   final AppUpdatePlatform _platform;
   final HttpClient Function() _httpClientFactory;
   final Future<Directory> Function() _supportDirectory;
+  final int downloadChunkBytes;
 
   @override
   Future<UpdateCheckResult> check({required int currentDatasetVersion}) async {
@@ -139,7 +142,11 @@ class HomelabAppUpdateService implements AppUpdateService {
       path.join(updates.path, 'pokemon-adventure-${release.versionCode}.apk'),
     );
     final partialFile = File('${finalFile.path}.part');
-    if (await partialFile.exists()) {
+    if (downloadChunkBytes <= 0) {
+      throw const FormatException('APK download chunk size is invalid.');
+    }
+    if (await partialFile.exists() &&
+        await partialFile.length() > release.sizeBytes) {
       await partialFile.delete();
     }
 
@@ -147,43 +154,73 @@ class HomelabAppUpdateService implements AppUpdateService {
       ..connectionTimeout = const Duration(seconds: 15);
     IOSink? output;
     try {
-      final request = await client.getUrl(release.apkUri);
-      final response = await request.close().timeout(
-        const Duration(seconds: 30),
-      );
-      _validateResponse(response, release.apkUri);
-      if (response.contentLength > 0 &&
-          response.contentLength != release.sizeBytes) {
-        throw const FormatException(
-          'APK size does not match the release manifest.',
+      var received = await partialFile.exists()
+          ? await partialFile.length()
+          : 0;
+      onProgress(received / release.sizeBytes);
+      output = partialFile.openWrite(mode: FileMode.append);
+
+      while (received < release.sizeBytes) {
+        final rangeStart = received;
+        final rangeEnd = min(
+          rangeStart + downloadChunkBytes,
+          release.sizeBytes,
         );
+        final request = await client.getUrl(release.apkUri);
+        request.headers.set(
+          HttpHeaders.rangeHeader,
+          'bytes=$rangeStart-${rangeEnd - 1}',
+        );
+        final response = await request.close().timeout(
+          const Duration(seconds: 30),
+        );
+        _validateDownloadResponse(
+          response,
+          release.apkUri,
+          rangeStart: rangeStart,
+          rangeEnd: rangeEnd,
+          totalBytes: release.sizeBytes,
+        );
+
+        var rangeReceived = 0;
+        await for (final chunk in response.timeout(
+          const Duration(seconds: 30),
+        )) {
+          rangeReceived += chunk.length;
+          received += chunk.length;
+          if (received > release.sizeBytes ||
+              received > _maximumApkBytes ||
+              (response.statusCode == HttpStatus.partialContent &&
+                  received > rangeEnd)) {
+            throw const FormatException(
+              'APK download is larger than expected.',
+            );
+          }
+          output.add(chunk);
+          onProgress(received / release.sizeBytes);
+        }
+        if (response.statusCode == HttpStatus.partialContent &&
+            rangeReceived != rangeEnd - rangeStart) {
+          throw HttpException(
+            'APK download chunk ended before it was complete.',
+          );
+        }
       }
 
-      output = partialFile.openWrite();
-      final digestOutput = AccumulatorSink<Digest>();
-      final digestInput = sha256.startChunkedConversion(digestOutput);
-      var received = 0;
-      await for (final chunk in response.timeout(const Duration(seconds: 30))) {
-        received += chunk.length;
-        if (received > release.sizeBytes || received > _maximumApkBytes) {
-          throw const FormatException('APK download is larger than expected.');
-        }
-        output.add(chunk);
-        digestInput.add(chunk);
-        onProgress(received / release.sizeBytes);
-      }
       await output.flush();
       await output.close();
       output = null;
-      digestInput.close();
 
       if (received != release.sizeBytes) {
         throw const FormatException(
           'APK download ended before it was complete.',
         );
       }
-      final actualHash = digestOutput.events.single.toString().toLowerCase();
+      final actualHash = (await sha256.bind(partialFile.openRead()).first)
+          .toString()
+          .toLowerCase();
       if (actualHash != release.sha256) {
+        await partialFile.delete();
         throw const FormatException('APK checksum verification failed.');
       }
       if (await finalFile.exists()) {
@@ -195,9 +232,6 @@ class HomelabAppUpdateService implements AppUpdateService {
     } finally {
       await output?.close();
       client.close(force: true);
-      if (await partialFile.exists()) {
-        await partialFile.delete();
-      }
     }
   }
 
@@ -293,6 +327,44 @@ class HomelabAppUpdateService implements AppUpdateService {
         uri: requestedUri,
       );
     }
+    _validateRedirects(response);
+  }
+
+  void _validateDownloadResponse(
+    HttpClientResponse response,
+    Uri requestedUri, {
+    required int rangeStart,
+    required int rangeEnd,
+    required int totalBytes,
+  }) {
+    if (response.statusCode == HttpStatus.ok && rangeStart == 0) {
+      if (response.contentLength > 0 && response.contentLength != totalBytes) {
+        throw const FormatException(
+          'APK size does not match the release manifest.',
+        );
+      }
+      _validateRedirects(response);
+      return;
+    }
+    if (response.statusCode != HttpStatus.partialContent) {
+      throw HttpException(
+        'Update server returned HTTP ${response.statusCode}.',
+        uri: requestedUri,
+      );
+    }
+    final expectedRange = 'bytes $rangeStart-${rangeEnd - 1}/$totalBytes';
+    if (response.headers.value(HttpHeaders.contentRangeHeader) !=
+        expectedRange) {
+      throw const FormatException('APK server returned an unexpected range.');
+    }
+    if (response.contentLength > 0 &&
+        response.contentLength != rangeEnd - rangeStart) {
+      throw const FormatException('APK download chunk has the wrong size.');
+    }
+    _validateRedirects(response);
+  }
+
+  void _validateRedirects(HttpClientResponse response) {
     if (!kDebugMode &&
         response.redirects.any(
           (redirect) => redirect.location.scheme.toLowerCase() != 'https',

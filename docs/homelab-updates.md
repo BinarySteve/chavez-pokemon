@@ -208,6 +208,9 @@ See [latest.example.json](homelab/latest.example.json).
 manifest. The app rejects malformed manifests, APKs larger than 750 MiB,
 unexpected sizes, and checksum mismatches.
 
+APK downloads use 8 MiB HTTP ranges. An interrupted download keeps its partial
+file and resumes on the next attempt instead of restarting at zero.
+
 ## Publish a build
 
 Increase the version in `pubspec.yaml`. Both parts matter; for example,
@@ -224,7 +227,9 @@ Use the combined release command:
 The command reads the version from `pubspec.yaml`, prompts locally for the
 family signing password if it is not already loaded, builds with the HTTPS
 manifest URL, and pins the signature to the APK currently served by the
-homelab. The password is not written to disk.
+homelab. The bundled artwork is optimized so the universal APK remains small
+while supporting ARM64 phones, older 32-bit ARM devices, and Android emulators.
+The password is not written to disk.
 
 The dedicated Docker container mounts that release directory read-only. The
 publisher copies the versioned APK first and moves the completed `latest.json`

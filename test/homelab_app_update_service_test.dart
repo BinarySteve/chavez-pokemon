@@ -46,8 +46,29 @@ void main() {
           'application',
           'vnd.android.package-archive',
         );
-        request.response.contentLength = apkBytes.length;
-        request.response.add(apkBytes);
+        final range = request.headers.value(HttpHeaders.rangeHeader);
+        final match = range == null
+            ? null
+            : RegExp(r'^bytes=(\d+)-(\d+)$').firstMatch(range);
+        if (match == null) {
+          request.response.contentLength = apkBytes.length;
+          request.response.add(apkBytes);
+        } else {
+          final start = int.parse(match.group(1)!);
+          final requestedEnd = int.parse(match.group(2)!);
+          final end = requestedEnd < apkBytes.length
+              ? requestedEnd
+              : apkBytes.length - 1;
+          final bytes = apkBytes.sublist(start, end + 1);
+          request.response
+            ..statusCode = HttpStatus.partialContent
+            ..contentLength = bytes.length
+            ..headers.set(
+              HttpHeaders.contentRangeHeader,
+              'bytes $start-$end/${apkBytes.length}',
+            )
+            ..add(bytes);
+        }
       } else {
         request.response.statusCode = HttpStatus.notFound;
       }
@@ -66,6 +87,7 @@ void main() {
           'http://${server.address.address}:${server.port}/latest.json',
       platform: updatePlatform,
       supportDirectory: () async => temporaryDirectory,
+      downloadChunkBytes: 5,
     );
   }
 
