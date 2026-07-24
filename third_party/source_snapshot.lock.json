@@ -1,0 +1,85 @@
+{
+  "acquisitionToolVersion": "1.1.0",
+  "createdAtUtc": "2026-07-23T21:16:32.032475Z",
+  "encounterGuideSource": {
+    "csvFiles": {
+      "encounter_condition_value_map.csv": "records/encounters/encounter_condition_value_map.csv",
+      "encounter_condition_value_prose.csv": "records/encounters/encounter_condition_value_prose.csv",
+      "encounter_condition_values.csv": "records/encounters/encounter_condition_values.csv",
+      "encounter_method_prose.csv": "records/encounters/encounter_method_prose.csv",
+      "encounter_methods.csv": "records/encounters/encounter_methods.csv",
+      "encounter_slots.csv": "records/encounters/encounter_slots.csv",
+      "encounters.csv": "records/encounters/encounters.csv",
+      "languages.csv": "records/encounters/languages.csv",
+      "location_area_prose.csv": "records/encounters/location_area_prose.csv",
+      "location_areas.csv": "records/encounters/location_areas.csv",
+      "locations.csv": "records/encounters/locations.csv",
+      "pokemon.csv": "records/encounters/pokemon.csv",
+      "versions.csv": "records/encounters/versions.csv"
+    },
+    "provider": "PokéAPI repository CSV",
+    "repositoryCommit": "091f3a0599b1efb01f6b502232eeb7d8cbbb3e8f"
+  },
+  "expectedCounts": {
+    "abilities": 302,
+    "artwork": {
+      "base": 1025,
+      "forms": 200
+    },
+    "defaultPokemon": 1025,
+    "evolutionChains": 541,
+    "forms": 200,
+    "letsGoDirectEncounterSpecies": 130,
+    "letsGoEncounterAreas": 65,
+    "moves": 795,
+    "pokemonRecords": 1225,
+    "species": 1025,
+    "types": 18
+  },
+  "highestNationalDexNumber": 1025,
+  "knownOmissions": [
+    "PokeAPI live API does not expose an immutable source revision.",
+    "Legacy cache entries may have different original acquisition times."
+  ],
+  "languages": [
+    "en"
+  ],
+  "licenses": [
+    {
+      "name": "PokéAPI BSD 3-Clause",
+      "reference": "licenses/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "name": "Pokémon artwork rights notice",
+      "reference": "licenses/THIRD_PARTY_NOTICES.md"
+    }
+  ],
+  "manualCorrections": [],
+  "parentSnapshotId": "2026-07-23-pokeapi-r1",
+  "relativeSnapshotPath": "third_party/source_snapshots/2026-07-23-pokeapi-r2",
+  "snapshotFormatVersion": 1,
+  "snapshotId": "2026-07-23-pokeapi-r2",
+  "snapshotMetadataSha256": "e192f3ab5ed82aa8e4fddc2a92a3ded6f1bc4a44aa1b6d84fd898d58a8a74df0",
+  "sourceAcquiredAtUtc": "2026-07-23T21:16:32.032475Z",
+  "sources": [
+    {
+      "baseLocation": "https://pokeapi.co/api/v2",
+      "catalogFile": "records/catalog/pokemon-species-limit-100000.json",
+      "catalogResultCount": 1025,
+      "catalogUrl": "https://pokeapi.co/api/v2/pokemon-species?limit=100000",
+      "name": "PokeAPI",
+      "revision": null
+    },
+    {
+      "baseLocation": "URLs embedded in PokeAPI Pokémon records",
+      "name": "PokeAPI sprites",
+      "revision": null
+    },
+    {
+      "baseLocation": "https://github.com/PokeAPI/pokeapi/tree/091f3a0599b1efb01f6b502232eeb7d8cbbb3e8f/data/v2/csv",
+      "name": "PokéAPI encounter CSV data",
+      "revision": "091f3a0599b1efb01f6b502232eeb7d8cbbb3e8f"
+    }
+  ],
+  "storagePolicy": "Snapshot directory is ignored by Git and must be archived to the private homelab plus a second backup."
+}

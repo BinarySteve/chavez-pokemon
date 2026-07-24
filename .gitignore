@@ -56,3 +56,8 @@ app.*.map.json
 /emulator-*.png
 /emulator-*.xml
 /*-build.err
+
+# Frozen reference-data working copies and acquisition artwork cache
+# The small source_snapshot.lock.json remains tracked.
+/third_party/source_snapshots/
+/third_party/pokeapi-artwork-cache/

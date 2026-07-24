@@ -29,6 +29,7 @@ class PokemonEmblem extends StatelessWidget {
     final emblem = Semantics(
       image: true,
       label: 'Artwork of ${pokemon.name}',
+      excludeSemantics: true,
       child: Container(
         width: size,
         height: size,

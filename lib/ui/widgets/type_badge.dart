@@ -13,6 +13,7 @@ class TypeBadge extends StatelessWidget {
     final color = typeColor(type);
     return Semantics(
       label: '$type type',
+      excludeSemantics: true,
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 9 : 12,
@@ -25,7 +26,7 @@ class TypeBadge extends StatelessWidget {
         child: Text(
           type,
           style: TextStyle(
-            color: Colors.white,
+            color: typeForegroundColor(type),
             fontSize: compact ? 12 : 14,
             fontWeight: FontWeight.w700,
           ),

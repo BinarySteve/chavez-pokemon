@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../application/adventure_controller.dart';
 import '../domain/models/pokemon_species.dart';
 import 'collection_screen.dart';
+import 'adventure_camp_screen.dart';
 import 'home_screen.dart';
 import 'gym_guide_screen.dart';
 import 'pokedex_screen.dart';
@@ -31,10 +32,25 @@ class _AdventureShellState extends State<AdventureShell> {
     );
   }
 
+  void _openAdventureCamp() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => AdventureCampScreen(
+          controller: widget.controller,
+          onOpenPokemon: _openPokemon,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomeScreen(controller: widget.controller, onOpenPokemon: _openPokemon),
+      HomeScreen(
+        controller: widget.controller,
+        onOpenPokemon: _openPokemon,
+        onOpenAdventureCamp: _openAdventureCamp,
+      ),
       PokedexScreen(controller: widget.controller, onOpenPokemon: _openPokemon),
       CollectionScreen(
         controller: widget.controller,
@@ -88,7 +104,7 @@ class _AdventureShellState extends State<AdventureShell> {
                       NavigationRailDestination(
                         icon: Icon(Icons.shield_outlined),
                         selectedIcon: Icon(Icons.shield_rounded),
-                        label: Text('Gyms'),
+                        label: Text('Let’s Go Gyms'),
                       ),
                     ],
                     onDestinationSelected: (index) {
@@ -129,7 +145,7 @@ class _AdventureShellState extends State<AdventureShell> {
               NavigationDestination(
                 icon: Icon(Icons.shield_outlined),
                 selectedIcon: Icon(Icons.shield_rounded),
-                label: 'Gyms',
+                label: 'Let’s Go Gyms',
               ),
             ],
           ),

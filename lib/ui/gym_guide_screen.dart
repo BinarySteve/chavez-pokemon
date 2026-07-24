@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../application/adventure_controller.dart';
-import '../domain/battle/type_matchups.dart';
+import '../application/gym_recommendation_service.dart';
 import '../domain/models/pokemon_species.dart';
 import 'widgets/pokemon_emblem.dart';
 import 'widgets/type_badge.dart';
@@ -18,38 +18,48 @@ class GymGuideScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      key: const PageStorageKey('gym-guide-scroll'),
-      slivers: [
-        SliverAppBar.large(
-          title: const Text('Gym battle guide'),
-          automaticallyImplyLeading: false,
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-          sliver: SliverList.list(
-            children: [
-              Text(
-                'Choose a Gym. See its team, strong move types, and Pokémon that may help.',
-                style: Theme.of(context).textTheme.bodyLarge,
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final caughtSpeciesIds = {
+          for (final pokemon in controller.species)
+            if (controller.collectionFor(pokemon.id).isCaught) pokemon.id,
+        };
+        return CustomScrollView(
+          key: const PageStorageKey('gym-guide-scroll'),
+          slivers: [
+            SliverAppBar.large(
+              title: const Text('Let’s Go Gyms'),
+              automaticallyImplyLeading: false,
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+              sliver: SliverList.list(
+                children: [
+                  Text(
+                    'Choose a Gym. We’ll start with your caught Pokémon, then show a few helpers you can find along the way.',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Mark a Pokémon as Caught to include it in your helper choices.',
+                  ),
+                  const SizedBox(height: 18),
+                  for (final gym in gyms) ...[
+                    _GymCard(
+                      gym: gym,
+                      controller: controller,
+                      caughtSpeciesIds: caughtSpeciesIds,
+                      onOpenPokemon: onOpenPokemon,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Guide covers the first story battle in Let’s Go Pikachu and Eevee.',
-              ),
-              const SizedBox(height: 18),
-              for (final gym in gyms) ...[
-                _GymCard(
-                  gym: gym,
-                  controller: controller,
-                  onOpenPokemon: onOpenPokemon,
-                ),
-                const SizedBox(height: 12),
-              ],
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -58,28 +68,23 @@ class _GymCard extends StatelessWidget {
   const _GymCard({
     required this.gym,
     required this.controller,
+    required this.caughtSpeciesIds,
     required this.onOpenPokemon,
   });
 
   final GymGuide gym;
   final AdventureController controller;
+  final Set<int> caughtSpeciesIds;
   final ValueChanged<PokemonSpecies> onOpenPokemon;
+  static const _recommendations = GymRecommendationService();
 
   @override
   Widget build(BuildContext context) {
-    final opponents = gym.team
-        .map((member) => controller.speciesById(member.speciesId))
-        .whereType<PokemonSpecies>()
-        .toList();
-    final usefulTypes = <String>{
-      for (final pokemon in opponents) ...bestAttackTypes(pokemon.types),
-    };
-    final helpers = controller.species
-        .where((pokemon) {
-          return pokemon.moves.any((move) => usefulTypes.contains(move.type));
-        })
-        .take(8)
-        .toList();
+    final opponents = [
+      for (final member in gym.team)
+        if (controller.speciesById(member.speciesId) case final pokemon?)
+          _ResolvedOpponent(pokemon: pokemon, level: member.level),
+    ];
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -94,85 +99,411 @@ class _GymCard extends StatelessWidget {
           const Divider(),
           Text('Their team', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          for (var index = 0; index < opponents.length; index++)
+          for (final opponent in opponents)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: PokemonEmblem(pokemon: opponents[index], size: 52),
-              title: Text(opponents[index].name),
-              subtitle: Text('Level ${gym.team[index].level}'),
+              leading: PokemonEmblem(pokemon: opponent.pokemon, size: 52),
+              title: Text(opponent.pokemon.name),
+              subtitle: Text('Level ${opponent.level}'),
               trailing: Wrap(
                 spacing: 4,
                 children: [
-                  for (final type in opponents[index].types)
+                  for (final type in opponent.pokemon.types)
                     TypeBadge(type: type, compact: true),
                 ],
               ),
-              onTap: () => onOpenPokemon(opponents[index]),
+              onTap: () => onOpenPokemon(opponent.pokemon),
             ),
           const SizedBox(height: 12),
           Text(
-            'Try these move types',
+            'Plan for each Pokémon',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [for (final type in usefulTypes) TypeBadge(type: type)],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Pokémon that can learn helpful moves',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 104,
-            child: ListView.separated(
-              key: PageStorageKey('gym-${gym.badgeNumber}-helpers'),
-              scrollDirection: Axis.horizontal,
-              itemCount: helpers.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final pokemon = helpers[index];
-                return Material(
-                  color: Theme.of(context).colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(18),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () => onOpenPokemon(pokemon),
-                    child: SizedBox(
-                      width: 150,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Row(
-                          children: [
-                            PokemonEmblem(pokemon: pokemon, size: 48),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                pokemon.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+          const SizedBox(height: 10),
+          for (final opponent in opponents) ...[
+            _OpponentAdviceCard(
+              advice: _recommendations.recommendForOpponent(
+                opponent: opponent.pokemon,
+                candidates: controller.species,
+                caughtSpeciesIds: caughtSpeciesIds,
+                encounterGuide: controller.encounterGuide,
+                gymBadgeNumber: gym.badgeNumber,
+              ),
+              level: opponent.level,
+              gymLeader: gym.leader,
+              onOpenPokemon: onOpenPokemon,
             ),
-          ),
+            const SizedBox(height: 10),
+          ],
           const Text(
-            'Check that your Pokémon knows a matching move. Level and stats matter too.',
+            'Check that your helper knows the move. Level and stats matter too.',
           ),
         ],
       ),
     );
   }
 }
+
+class _ResolvedOpponent {
+  const _ResolvedOpponent({required this.pokemon, required this.level});
+
+  final PokemonSpecies pokemon;
+  final int level;
+}
+
+class _OpponentAdviceCard extends StatelessWidget {
+  const _OpponentAdviceCard({
+    required this.advice,
+    required this.level,
+    required this.gymLeader,
+    required this.onOpenPokemon,
+  });
+
+  final GymOpponentAdvice advice;
+  final int level;
+  final String gymLeader;
+  final ValueChanged<PokemonSpecies> onOpenPokemon;
+
+  @override
+  Widget build(BuildContext context) {
+    final opponent = advice.opponent;
+    final bestMultiplier = advice.moveTypes.isEmpty
+        ? 0.0
+        : advice.moveTypes.first.multiplier;
+    final bestMoveTypes = advice.moveTypes
+        .where((moveType) => moveType.multiplier == bestMultiplier)
+        .toList(growable: false);
+    final otherMoveTypes = advice.moveTypes
+        .where((moveType) => moveType.multiplier != bestMultiplier)
+        .toList(growable: false);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Against ${opponent.name} · Level $level',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text('Best move types against ${opponent.name}:'),
+            const SizedBox(height: 8),
+            _MoveTypeChoices(moveTypes: bestMoveTypes, opponent: opponent),
+            if (otherMoveTypes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'These can help too:',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 6),
+              _MoveTypeChoices(moveTypes: otherMoveTypes, opponent: opponent),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, size: 20),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    'Your caught helpers',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (advice.caughtHelpers.isEmpty)
+              _NoCaughtHelper(
+                bestMoveTypes: bestMoveTypes,
+                hasCatchSuggestions: advice.catchSuggestions.isNotEmpty,
+              )
+            else
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final largeText =
+                      MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+                  final width = largeText
+                      ? constraints.maxWidth
+                      : constraints.maxWidth < 220
+                      ? constraints.maxWidth
+                      : 220.0;
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final helper in advice.caughtHelpers)
+                        SizedBox(
+                          width: width,
+                          child: _HelperTile(
+                            helper: helper,
+                            opponent: opponent,
+                            onTap: () => onOpenPokemon(helper.pokemon),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            if (advice.catchSuggestions.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Icon(Icons.explore_rounded, size: 20),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      'You can catch these before $gymLeader',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              for (final suggestion in advice.catchSuggestions) ...[
+                _CatchSuggestionTile(
+                  suggestion: suggestion,
+                  opponent: opponent,
+                  onTap: () => onOpenPokemon(suggestion.pokemon),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CatchSuggestionTile extends StatelessWidget {
+  const _CatchSuggestionTile({
+    required this.suggestion,
+    required this.opponent,
+    required this.onTap,
+  });
+
+  final GymCatchSuggestion suggestion;
+  final PokemonSpecies opponent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final moveSummary = suggestion.moveTypes
+        .take(2)
+        .map((item) => '${item.type} ${_multiplierLabel(item.multiplier)}')
+        .join(' · ');
+    final locationSummary = suggestion.locations.map(_locationLabel).join('. ');
+    return Semantics(
+      button: true,
+      label:
+          'Open ${suggestion.pokemon.name}. Against ${opponent.name}: '
+          '$moveSummary. $locationSummary',
+      excludeSemantics: true,
+      child: Material(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                PokemonEmblem(pokemon: suggestion.pokemon, size: 44),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        suggestion.pokemon.name,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      Text(
+                        'Helpful move types: $moveSummary',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 5),
+                      for (final location in suggestion.locations)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(
+                            _locationLabel(location),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HelperTile extends StatelessWidget {
+  const _HelperTile({
+    required this.helper,
+    required this.opponent,
+    required this.onTap,
+  });
+
+  final GymHelperRecommendation helper;
+  final PokemonSpecies opponent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final moveSummary = helper.moveTypes
+        .take(2)
+        .map((item) => '${item.type} ${_multiplierLabel(item.multiplier)}')
+        .join(' · ');
+    return Semantics(
+      button: true,
+      label:
+          'Open ${helper.pokemon.name}. Against ${opponent.name}: $moveSummary',
+      excludeSemantics: true,
+      child: Material(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                PokemonEmblem(pokemon: helper.pokemon, size: 44),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        helper.pokemon.name,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      Text(
+                        'Against ${opponent.name}: $moveSummary',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MoveTypeChoices extends StatelessWidget {
+  const _MoveTypeChoices({required this.moveTypes, required this.opponent});
+
+  final List<GymMoveTypeAdvice> moveTypes;
+  final PokemonSpecies opponent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final moveType in moveTypes)
+          Semantics(
+            label:
+                '${moveType.type} moves do ${_multiplierWords(moveType.multiplier)} damage against ${opponent.name}',
+            excludeSemantics: true,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TypeBadge(type: moveType.type, compact: true),
+                const SizedBox(width: 5),
+                Text(_multiplierLabel(moveType.multiplier)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _NoCaughtHelper extends StatelessWidget {
+  const _NoCaughtHelper({
+    required this.bestMoveTypes,
+    required this.hasCatchSuggestions,
+  });
+
+  final List<GymMoveTypeAdvice> bestMoveTypes;
+  final bool hasCatchSuggestions;
+
+  @override
+  Widget build(BuildContext context) {
+    final types = _joinTypeNames(bestMoveTypes.map((item) => item.type));
+    final suggestion = types.isEmpty
+        ? 'Look through your team for a Pokémon with a strong move.'
+        : 'Look through your team for a Pokémon that knows a $types move.';
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'No matching caught helper yet.',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              hasCatchSuggestions
+                  ? 'That’s okay! Here are a few you can find before this Gym.'
+                  : 'That’s okay! $suggestion Mark it Caught in your Collection when you have it.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _locationLabel(GymEncounterLocation location) {
+  final level = location.minLevel == location.maxLevel
+      ? 'Lv. ${location.minLevel}'
+      : 'Lv. ${location.minLevel}–${location.maxLevel}';
+  return '${location.area.displayName} · ${location.methodLabel} · '
+      '$level · ${location.versionLabel}';
+}
+
+String _joinTypeNames(Iterable<String> types) {
+  final values = types.toList(growable: false);
+  return switch (values.length) {
+    0 => '',
+    1 => values.single,
+    2 => '${values.first} or ${values.last}',
+    _ => '${values.take(values.length - 1).join(', ')}, or ${values.last}',
+  };
+}
+
+String _multiplierLabel(double value) =>
+    value == value.roundToDouble() ? '${value.toInt()}×' : '$value×';
+
+String _multiplierWords(double value) =>
+    value == value.roundToDouble() ? '${value.toInt()} times' : '$value times';
 
 class GymGuide {
   const GymGuide(

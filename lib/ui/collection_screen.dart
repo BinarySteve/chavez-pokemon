@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../application/adventure_controller.dart';
+import '../domain/models/collection_state.dart';
 import '../domain/models/pokemon_species.dart';
 import 'widgets/pokemon_emblem.dart';
 
@@ -74,6 +75,25 @@ class CollectionScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                 sliver: SliverLayoutBuilder(
                   builder: (context, constraints) {
+                    final largeText =
+                        MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+                    if (largeText) {
+                      return SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final pokemon = entries[index];
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: index == entries.length - 1 ? 0 : 12,
+                            ),
+                            child: _CollectionEntryCard(
+                              pokemon: pokemon,
+                              state: controller.collectionFor(pokemon.id),
+                              onTap: () => onOpenPokemon(pokemon),
+                            ),
+                          );
+                        }, childCount: entries.length),
+                      );
+                    }
                     final columns = constraints.crossAxisExtent >= 850
                         ? 3
                         : constraints.crossAxisExtent >= 560
@@ -89,71 +109,10 @@ class CollectionScreen extends StatelessWidget {
                       itemCount: entries.length,
                       itemBuilder: (context, index) {
                         final pokemon = entries[index];
-                        final state = controller.collectionFor(pokemon.id);
-                        return Card(
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: () => onOpenPokemon(pokemon),
-                            child: Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Row(
-                                children: [
-                                  PokemonEmblem(pokemon: pokemon, size: 66),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          pokemon.name,
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.titleMedium,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Wrap(
-                                          spacing: 4,
-                                          children: [
-                                            if (state.isFavorite)
-                                              const _StateIcon(
-                                                icon: Icons.favorite_rounded,
-                                                label: 'Favorite',
-                                              ),
-                                            if (state.isSeen)
-                                              const _StateIcon(
-                                                icon: Icons.visibility_rounded,
-                                                label: 'Seen',
-                                              ),
-                                            if (state.isCaught)
-                                              const _StateIcon(
-                                                icon:
-                                                    Icons.check_circle_rounded,
-                                                label: 'Caught',
-                                              ),
-                                            if (state.isShiny)
-                                              const _StateIcon(
-                                                icon:
-                                                    Icons.auto_awesome_rounded,
-                                                label: 'Shiny',
-                                              ),
-                                            if (state.wantsToFind)
-                                              const _StateIcon(
-                                                icon: Icons.flag_rounded,
-                                                label: 'Want to find',
-                                              ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(Icons.chevron_right_rounded),
-                                ],
-                              ),
-                            ),
-                          ),
+                        return _CollectionEntryCard(
+                          pokemon: pokemon,
+                          state: controller.collectionFor(pokemon.id),
+                          onTap: () => onOpenPokemon(pokemon),
                         );
                       },
                     );
@@ -167,6 +126,82 @@ class CollectionScreen extends StatelessWidget {
   }
 }
 
+class _CollectionEntryCard extends StatelessWidget {
+  const _CollectionEntryCard({
+    required this.pokemon,
+    required this.state,
+    required this.onTap,
+  });
+
+  final PokemonSpecies pokemon;
+  final CollectionState state;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              PokemonEmblem(pokemon: pokemon, size: 66),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      pokemon.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        if (state.isFavorite)
+                          const _StateIcon(
+                            icon: Icons.favorite_rounded,
+                            label: 'Favorite',
+                          ),
+                        if (state.isSeen)
+                          const _StateIcon(
+                            icon: Icons.visibility_rounded,
+                            label: 'Seen',
+                          ),
+                        if (state.isCaught)
+                          const _StateIcon(
+                            icon: Icons.check_circle_rounded,
+                            label: 'Caught',
+                          ),
+                        if (state.isShiny)
+                          const _StateIcon(
+                            icon: Icons.auto_awesome_rounded,
+                            label: 'Shiny',
+                          ),
+                        if (state.wantsToFind)
+                          const _StateIcon(
+                            icon: Icons.flag_rounded,
+                            label: 'Want to find',
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CollectionSummary extends StatelessWidget {
   const _CollectionSummary({required this.controller});
 
@@ -174,18 +209,27 @@ class _CollectionSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+    final counts = [
+      _Count(label: 'Seen', value: controller.seenCount),
+      _Count(label: 'Caught', value: controller.caughtCount),
+      _Count(label: 'Favorites', value: controller.favoriteCount),
+    ];
     return Card(
       color: Theme.of(context).colorScheme.secondaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _Count(label: 'Seen', value: controller.seenCount),
-            _Count(label: 'Caught', value: controller.caughtCount),
-            _Count(label: 'Favorites', value: controller.favoriteCount),
-          ],
-        ),
+        child: largeText
+            ? Wrap(
+                alignment: WrapAlignment.spaceAround,
+                spacing: 20,
+                runSpacing: 16,
+                children: counts,
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: counts,
+              ),
       ),
     );
   }
@@ -201,6 +245,7 @@ class _Count extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: '$value $label',
+      excludeSemantics: true,
       child: Column(
         children: [
           Text('$value', style: Theme.of(context).textTheme.headlineMedium),

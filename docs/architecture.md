@@ -26,7 +26,7 @@ SQLite reference data + SQLite user data
 | `assets/content/` | bundled reference database and manifest |
 | `assets/artwork/` | base-species artwork |
 | `assets/form_artwork/` | displayed-form artwork |
-| `tool/` | legacy combined data acquisition and generation |
+| `tool/` | separated snapshot acquisition, validation, and offline generation |
 | `test/` | model, repository, persistence, and widget tests |
 
 ## Runtime data flow
@@ -36,9 +36,14 @@ SQLite reference data + SQLite user data
 3. `SqliteReferenceRepository` opens that copied database read-only.
 4. `SqliteUserRepository` opens a separate writable trainer database.
 5. `AdventureController` loads both repositories and exposes state to widgets.
-6. UI changes to collection state are saved only in the user database.
+6. Collection changes are written to the user database before the controller
+   publishes the new in-memory state.
 
 Reference-data upgrades therefore do not overwrite trainer progress.
+
+Partner changes replace the single `trainer_profile` row with the same trainer
+name and avatar plus a new `partner_species_id`. Collection and activity tables
+are not modified.
 
 ## Reference storage
 
@@ -67,6 +72,27 @@ rollback content, and startup recovery before downloaded content uses it.
 Content preparation currently happens before `runApp`. A preparation failure
 therefore cannot be displayed by the Flutter error view.
 
+## Build-time reference-data flow
+
+Reference-data tooling is isolated from the Flutter runtime:
+
+```text
+PokeAPI + legacy cache + existing artwork
+                 ↓ explicit acquisition only
+ignored immutable source snapshot + tracked lock
+                 ↓ validated, socket-blocked generation
+ignored candidate + checksums/reports/comparison
+                 ↓ separate future review and promotion
+bundled assets/content + artwork
+```
+
+`tool/acquire_reference_snapshot.py` is the only network-capable entry point.
+`tool/build_reference_data.py` validates one locked snapshot, blocks socket
+connections, creates output in a temporary directory, validates SQLite and
+artwork, then atomically publishes a candidate under `build/`. It never changes
+the active bundled database or artwork. The runtime content activation design
+is unchanged by this build-time pipeline.
+
 ## Domain models
 
 `PokemonSpecies` contains:
@@ -90,17 +116,72 @@ both defending types, including 4× weaknesses, ¼× resistances, and immunities
 - Home
 - Pokédex
 - Collection
-- Gyms
+- Let’s Go Gyms
 
 Phones use `NavigationBar`; wider layouts use `NavigationRail`.
 
-Each Gym expansion tile and nested horizontal helper list has a unique
-`PageStorageKey`. This prevents expansion booleans from colliding with saved
-scroll offsets.
+Each Gym expansion tile has a unique `PageStorageKey`. Helper choices use
+wrapping, natural-height layouts rather than nested horizontal scroll lists.
 
-The current Gym roster and recommendation orchestration live in the UI layer.
-That is manageable for the present fixed guide, but it prevents content-only
-Gym corrections and allows helper candidates outside the Let’s Go roster. The
-next product-correctness phase will move recommendation rules behind a
-testable application/domain boundary without replacing the broader
-architecture.
+The fixed Gym roster facts remain in the UI model.
+`GymRecommendationService` in the application layer calculates
+opponent-specific effective move types and deterministic helper rankings. It
+uses the shared `isLetsGoSpecies` domain predicate, which also powers the
+Pokédex scope. Caught recommendations require a matching move in the bundled
+data. Uncaught recommendations additionally require a condition-free
+`overworld` or `overworld-special` record whose reviewed `requiredBadges` value
+is lower than the viewed Gym number. Gifts, trades, traversal methods, static
+or conditioned encounters, and later progression are rejected fail-closed.
+`GymGuideScreen` listens to the controller so returning from a Collection
+change refreshes suggestions without restarting the app.
+
+The independently versioned `assets/guides/lets_go_encounters.json` asset is
+read through `EncounterGuideRepository`. `AdventureController` loads it only
+after core reference and trainer readiness. Load or validation failure exposes
+an empty guide without setting the app error, preserving caught-only guidance
+and offline startup.
+
+`AdventureController` owns a per-species pending-write set for collection
+changes. Screens route favorite and child-selected status writes through one
+failure-handling path. Merely opening or browsing a Pokémon entry never changes
+its Seen status. The repository is called first; only a successful write changes
+published collection state.
+
+## Homelab app updates
+
+`HomelabAppUpdateService` reads an optional build-time
+`APP_UPDATE_MANIFEST_URL`. It compares the manifest's Android version code with
+the installed app, downloads newer APKs into private application storage, and
+verifies the declared byte count and SHA-256 checksum before exposing the file
+to Android through a narrow platform channel. APK URLs must remain on the
+manifest's HTTPS origin.
+
+The native bridge accepts only `.apk` files inside the private `files/updates`
+directory. Android's package installer remains responsible for install-source
+permission, signing-certificate validation, version-code validation, and final
+adult confirmation. Update-server failure never blocks bundled data or offline
+startup.
+
+The server side is deliberately static: an unprivileged Nginx container at
+`C:\docker\pokemon-adventure-updates` mounts a release directory read-only.
+Unlike Lift Ledger, this app has no authentication or server database, so an
+authenticated API would add failure modes without adding update trust. Android
+signing identity remains the final authority.
+
+## Adventure activities
+
+`MiniAdventureService` deterministically builds one daily three-round activity
+from the Let’s Go roster and seeded Free Play activities. It uses typed round
+models and existing species, matchup, evolution, partner, and Collection data;
+no activity content is fetched or generated at runtime.
+
+`ActivityRepository` is a separate interface implemented by
+`SqliteUserRepository`. Trainer schema 2 adds activity completions and earned
+stickers through an explicit v1-to-v2 migration. Completion and sticker award
+occur in one idempotent SQLite transaction. The controller publishes progress
+only after that transaction succeeds.
+
+Activity progress loads after core app readiness. Its failure does not block
+the Pokédex, Collection, Gyms, or Free Play. Adventure Camp and the lazy,
+natural-height Sticker Scrapbook are pushed routes, so the existing four
+primary destinations remain unchanged.

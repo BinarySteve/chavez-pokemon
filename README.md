@@ -13,9 +13,16 @@ getting kid-friendly help with **Pokémon: Let’s Go, Pikachu!** and
 - base stats, abilities, types, descriptions, height, and weight
 - kid-friendly strength, weakness, resistance, and immunity guidance
 - All Pokémon and Let’s Go Pokédex scopes
-- all eight Let’s Go story Gym teams with move-aware suggestions
-- local trainer profile, favorites, Seen, Caught, Shiny, and Want to Find
-- 1,225 bundled images and no runtime internet requirement
+- all eight Let’s Go story Gym teams with opponent-specific caught helpers and
+  pre-Gym walking encounter suggestions
+- Adventure Camp with daily mini adventures, no-pressure Free Play, and a
+  153-slot Sticker Scrapbook
+- local trainer profile plus child-controlled Favorites, Seen, Caught, Shiny,
+  and Want to Find tracking (browsing never marks a Pokémon Seen)
+- searchable partner selection that can be changed anytime from Home
+- optional homelab APK updates with a kid-friendly grown-up prompt, download
+  progress, SHA-256 verification, and Android install confirmation
+- 1,225 bundled images; internet is optional and used only for homelab updates
 
 ## Quick start
 
@@ -25,18 +32,28 @@ flutter test
 flutter run
 ```
 
-The checked-in database and artwork are the runnable application inputs. The
-current legacy data tool can rebuild them, but it combines acquisition and
-generation, may contact PokeAPI for missing cache entries or artwork, and is
-not deterministic:
+The checked-in database and artwork are the runnable application inputs.
+Reference-data work is deliberately split into an explicit network-capable
+acquisition step and a network-blocked generation step:
 
 ```powershell
-python tool\build_lets_go_data.py
+python tool\acquire_reference_snapshot.py --snapshot-id <snapshot-id>
+python tool\build_reference_data.py validate-snapshot
+python tool\build_reference_data.py build
+python tool\build_reference_data.py build-guide
 ```
 
-Run that command only when intentionally replacing generated content. It writes
-the bundled reference database directly. The planned pipeline will separate
-network acquisition from an offline deterministic build.
+Generation writes validated candidates under `build/reference-data/`; it does
+not replace bundled database or artwork content. The current r2 source snapshot
+preserves the sealed legacy species/artwork inputs and adds Let’s Go encounter
+CSVs pinned to an exact PokéAPI repository commit. It is identified by
+`third_party/source_snapshot.lock.json`; its large local directory is ignored
+by Git and must be retained in the private homelab artifact store plus a second
+backup.
+
+`tool/build_lets_go_data.py` remains only as a deprecated compatibility wrapper
+for the offline build command. It no longer acquires data or writes shipping
+assets.
 
 The generated reference database is stored at
 `assets/content/demo_reference.sqlite`. The filename is retained from the
@@ -49,17 +66,20 @@ original prototype; it now contains the full dataset.
 - [Architecture](docs/architecture.md)
 - [Data and artwork pipeline](docs/data-and-assets.md)
 - [Development and testing](docs/development.md)
+- [Homelab app updates](docs/homelab-updates.md)
 - [Implementation status](docs/implementation-status.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## Current release status
 
-The application is functional for private family use, but release engineering
-is not complete. Android release builds currently use the debug signing
-certificate. The bundled content activator has no validated rollback slot, and
-the data generator is not yet a frozen offline pipeline. See the
-[implementation status](docs/implementation-status.md) before preparing an
-update or family-device release.
+The permanent family signing chain and private homelab update endpoint are
+established. Family releases must keep using the existing keystore and must
+increase the Android version code every time. Release builds still fall back to
+the debug certificate when signing credentials are absent, but the combined
+homelab release script rejects that certificate before publishing. Maintaining
+encrypted, offline keystore backups remains essential. See
+[Homelab app updates](docs/homelab-updates.md) for the repeatable release
+workflow.
 
 ## Distribution warning
 

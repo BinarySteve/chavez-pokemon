@@ -141,11 +141,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     FilledButton.icon(
                       onPressed: _saving ? null : _complete,
                       icon: _saving
-                          ? const SizedBox.square(
+                          ? SizedBox.square(
                               dimension: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             )
                           : const Icon(Icons.flag_rounded),
@@ -199,7 +199,8 @@ class _PartnerGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 620 ? 4 : 2;
+        final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+        final columns = largeText ? 1 : (constraints.maxWidth >= 620 ? 4 : 2);
         final cardWidth =
             (constraints.maxWidth - ((columns - 1) * 12)) / columns;
         return Wrap(
@@ -213,6 +214,7 @@ class _PartnerGrid extends StatelessWidget {
                   button: true,
                   selected: pokemon.id == selectedId,
                   label: 'Choose ${pokemon.name} as partner',
+                  excludeSemantics: true,
                   child: InkWell(
                     onTap: () => onSelected(pokemon.id),
                     borderRadius: BorderRadius.circular(24),

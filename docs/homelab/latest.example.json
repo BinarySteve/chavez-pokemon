@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "packageName": "com.chavezfamily.pokemon_adventure",
+  "versionCode": 2,
+  "versionName": "1.1.0",
+  "apkUrl": "pokemon-adventure-1.1.0-2.apk",
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "sizeBytes": 123456789,
+  "title": "More Pokémon fun",
+  "notes": [
+    "New discoveries to explore",
+    "Friendlier battle tips"
+  ]
+}

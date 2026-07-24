@@ -45,6 +45,7 @@ Run all tests:
 
 ```powershell
 flutter test
+python -m unittest discover -s tool\tests -v
 ```
 
 Current coverage includes:
@@ -55,21 +56,44 @@ Current coverage includes:
 - reference-database SQLite integrity and foreign keys
 - form artwork existence
 - user profile and collection persistence
+- persistence-first collection writes, failure preservation, and duplicate
+  pending-write suppression
 - onboarding and adaptive navigation
+- searchable partner changes and profile persistence
 - All Pokémon and Let’s Go scope switching
 - tap-outside keyboard dismissal
-- Gym helper rendering smoke coverage
+- opponent-isolated Gym recommendation ranking, Let’s Go roster exclusion,
+  Caught-state filtering, move requirements, multipliers, and caught/catch
+  caps
+- pre-Gym progression exclusion, walking-method and condition filtering,
+  normal-versus-rare ranking, version labels, and missing-guide fallback
+- audited encounter-guide asset coverage and malformed-guide rejection
+- Gym helper rendering, catch locations/levels/version labels, live Caught
+  refresh, and the no-matching-helper fallback
 - kid-friendly matchup labels
-- 200% text scaling on the phone Home screen
+- theme and type-badge contrast plus focused semantic labels
+- 200% text scaling on phone and tablet for onboarding, Pokédex, Collection,
+  expanded Gyms, Pokémon details, form sheets, mini adventures, and the
+  Sticker Scrapbook
+- trainer schema 1-to-2 migration, non-destructive downgrade rejection,
+  migration rollback, atomic/idempotent activity completion, and sticker
+  persistence
+- deterministic daily activities, Free Play variation, Collection
+  personalization, unambiguous choices, gentle correction, save retry, daily
+  replay, local-date rollover, and orphaned sticker rendering
+- Android detail-route back and modal-sheet back behavior
 
 Not yet covered:
 
 - transactional content activation, interrupted copies, rollback, or recovery
-- trainer-database migrations, backup, or restore
-- collection write failures
+- trainer-database backup or restore
 - release-over-release installation and signing identity
-- 200% layouts beyond Home
 - representative-device startup and search performance
+
+Homelab update coverage verifies newer/current manifest decisions, streamed APK
+download, progress, exact byte count, SHA-256 rejection, Android installer
+handoff, and the child-facing grown-up prompt. See
+[Homelab app updates](homelab-updates.md) for publishing and device setup.
 
 ## Build Android APK
 
@@ -79,10 +103,12 @@ flutter build apk --debug
 
 The debug APK is large because 1,225 artwork files are bundled for offline use.
 
-A release APK also builds, but `android/app/build.gradle.kts` currently signs
-the release build with the Android debug certificate. Do not treat that APK as
-the permanent family-device release identity. Establish and back up a
-permanent release key before a durable update chain begins.
+A release APK also builds. `android/app/build.gradle.kts` uses the permanent
+family key when all `POKEMON_KEYSTORE_*` environment variables are set and
+otherwise falls back to the Android debug certificate for local testing. Do not
+treat a fallback build as the permanent family-device release identity.
+Establish and back up a permanent release key before a durable update chain
+begins.
 
 Install and launch on the current emulator:
 
@@ -93,16 +119,43 @@ adb shell monkey -p com.chavezfamily.pokemon_adventure `
   -c android.intent.category.LAUNCHER 1
 ```
 
-## Regenerate data
+## Validate and generate reference-data candidates
 
 ```powershell
-python tool\build_lets_go_data.py
+python tool\build_reference_data.py validate-snapshot
+python tool\build_reference_data.py build --allow-snapshot-warnings
+python tool\build_reference_data.py validate-output `
+  --output build\reference-data\2026-07-23-pokeapi-r2
+python tool\build_reference_data.py build-guide
+python tool\build_reference_data.py validate-guide `
+  --guide build\reference-data\2026-07-23-pokeapi-r2\lets_go_encounters.json
 ```
 
-This legacy command uses the network for missing cache entries and artwork. It
-is not deterministic and rebuilds `assets/content/demo_reference.sqlite`
-directly. Preserve the current database before an intentional run. Routine
-Flutter builds and tests do not require regeneration.
+The build command is offline by construction and publishes only to ignored
+candidate output under `build/reference-data/`. It does not modify shipping
+assets. The current snapshot warnings describe the lack of a PokeAPI immutable
+revision and the mixed-age legacy cache; review them before passing
+`--allow-snapshot-warnings`.
+
+Inspect counts and the previous-dataset comparison:
+
+```powershell
+Get-Content build\reference-data\2026-07-23-pokeapi-r2\reports\semantic_counts.json
+Get-Content build\reference-data\2026-07-23-pokeapi-r2\reports\comparison.md
+```
+
+No network setup is needed for generation: the command installs an in-process
+socket guard and fails if transformation code attempts a connection.
+
+To acquire a new immutable species/artwork snapshot, use
+`tool/acquire_reference_snapshot.py`. To extend a restored r1 snapshot with
+the pinned encounter CSV source, use `tool/acquire_encounter_snapshot.py`.
+These are the only network-capable reference-data commands. See
+[Data and artwork](data-and-assets.md) for the full acquisition, archive,
+recovery, and promotion workflow.
+
+`tool/build_lets_go_data.py` is deprecated and delegates only to offline
+generation. Routine Flutter builds and tests do not require regeneration.
 
 ## Common problems
 
@@ -120,11 +173,17 @@ Then rebuild and reinstall the APK.
 Stop the stale Flutter debug or data-generator process, then rerun generation.
 Do not delete trainer data from the emulator.
 
+### Locked source snapshot is missing
+
+Read `third_party/source_snapshot.lock.json`, restore the matching immutable
+directory from the private homelab artifact store or second backup into
+`third_party/source_snapshots/`, then rerun `validate-snapshot`. Do not rebuild
+from the mutable cache merely to bypass a missing archive.
+
 ### Gym tab shows a type-cast error
 
-Keep unique `PageStorageKey` values on each Gym `ExpansionTile` and its nested
-helper `ListView`. Reusing storage identity can mix a boolean expansion state
-with a double scroll offset.
+Keep unique `PageStorageKey` values on each Gym `ExpansionTile`. Do not reuse a
+Gym expansion key for another saved scroll or expansion state.
 
 ### Artwork does not appear
 

@@ -10,9 +10,14 @@ connection after installation.
 
 - greets the local trainer
 - shows the selected partner
+- provides a visible **Change partner** action
 - tracks Seen, Caught, and Favorite totals
 - suggests a Pokémon to discover
 - rotates a Pokémon of the day
+
+The partner picker searches the complete Pokédex by name, form, or number.
+Changing partners preserves the trainer name, avatar, collection, stickers, and
+activity progress.
 
 ### Pokédex
 
@@ -66,29 +71,77 @@ can mark a species as:
 - Shiny
 - Want to Find
 
-### Gyms
+Opening a Pokémon entry does not mark it Seen. The child chooses Seen herself
+from the My adventure controls.
+
+The app waits for the local trainer database to save a change before updating
+the control. While that species is saving, its collection controls are
+disabled. If the write fails, the last saved values remain visible and the app
+offers a retry.
+
+### Let’s Go Gyms
 
 The Gym guide covers the first story battle for all eight Let’s Go Gyms. Each
-entry includes:
+entry separates guidance by opposing Pokémon and includes:
 
 - leader, city, specialty, and badge
 - opponent team and levels
-- useful attacking move types
-- Pokémon that can learn relevant moves
+- best attacking move types plus other helpful choices, with their actual
+  effectiveness multipliers
+- up to four Pokémon marked Caught that contain a relevant move in the bundled
+  move data
+- up to three uncaught Pokémon with a matching move type and a condition-free
+  walking encounter before the viewed Gym
+- up to two locations per catch suggestion, including level range, normal or
+  Rare spawn label, and Pikachu/Eevee version availability
 
 Gym recommendations are guidance, not guaranteed wins. Team level, stats, and
-the moves currently equipped still matter.
+the moves currently equipped still matter. A helper tile identifies matching
+move types, not an equipped move set.
 
-Current limitation: helper candidates are selected from the full bundled
-National Pokédex, so some suggested Pokémon may not be obtainable in Let’s Go.
-The recommendation should be read as move-type guidance until the next
-correctness phase restricts helpers to the Let’s Go roster.
+Caught recommendations ignore encounter progression because the child already
+owns that Pokémon. Uncaught suggestions use the separate, pinned Let’s Go
+encounter guide and a conservative reviewed badge map. A Gym numbered `N`
+shows only eligible walking encounters whose `requiredBadges` value is less
+than `N`.
+
+These recommendations are Let’s Go-compatible guidance, not a
+progression-perfect or version-exclusive availability guarantee. The guide
+does not model alternate Kanto routes, story events, gifts, trades, Surf,
+flying, static encounters, fossils, transfers, Poké Flute encounters, or
+evolution-only availability. Version-exclusive encounters are labeled
+explicitly. If neither caught nor catchable helpers match, the guide reassures
+the child and falls back to useful move types.
+
+### Adventure Camp
+
+Adventure Camp adds a short, replayable activity loop without changing the
+four main destinations. The Home card opens:
+
+- **Today’s Adventure** — Who’s That Pokémon?, Type Power!, and Evolution
+  Trail; finishing all three rounds earns one new sticker
+- **Free Play** — unlimited practice adventures that never alter rewards
+- **Sticker Scrapbook** — 153 Let’s Go-compatible slots in National Dex order
+
+Answers receive immediate friendly explanations. A wrong answer never reduces
+the reward, and there are no scores, timers, streaks, currencies, missed-day
+warnings, ads, or purchases. Daily questions use the local calendar date and
+stay the same when replayed. Partner, Caught, and Favorite Pokémon are
+preferred where a valid question can use them.
+
+Earned stickers show artwork and open the existing Pokémon detail page. Locked
+stickers remain mysteries. If a future reference-data version temporarily
+omits an earned species, the app retains its sticker record and shows an
+unavailable placeholder rather than deleting progress.
 
 ## Interaction and accessibility
 
 - tapping outside an input dismisses keyboard focus
 - layouts adapt between phone navigation bars and tablet navigation rails
-- the phone Home screen is tested at 200% text scale; broader large-text
-  coverage remains planned
+- onboarding, Pokédex, Collection, expanded Gym guidance, Pokémon details,
+  form sheets, mini adventures, and the Sticker Scrapbook are tested at 200%
+  text scale on phone and tablet viewports
+- lists and helper choices use natural-height or wrapping layouts at large text
 - artwork and controls include semantic labels
 - collection and form controls use large touch targets
+- theme controls and type badges maintain at least 4.5:1 text contrast
