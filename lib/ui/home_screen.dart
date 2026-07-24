@@ -10,11 +10,13 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({
     required this.controller,
     required this.onOpenPokemon,
+    required this.onOpenAdventureCamp,
     super.key,
   });
 
   final AdventureController controller;
   final ValueChanged<PokemonSpecies> onOpenPokemon;
+  final VoidCallback onOpenAdventureCamp;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +46,11 @@ class HomeScreen extends StatelessWidget {
                           trainerName: controller.profile!.name,
                           partner: partner,
                           onTap: () => onOpenPokemon(partner),
+                        ),
+                        const SizedBox(height: 18),
+                        _AdventureCampCard(
+                          controller: controller,
+                          onTap: onOpenAdventureCamp,
                         ),
                         const SizedBox(height: 18),
                         LayoutBuilder(
@@ -104,6 +111,69 @@ class HomeScreen extends StatelessWidget {
           pokemon.id != partnerId &&
           !controller.collectionFor(pokemon.id).isSeen,
       orElse: () => controller.species.first,
+    );
+  }
+}
+
+class _AdventureCampCard extends StatelessWidget {
+  const _AdventureCampCard({required this.controller, required this.onTap});
+
+  final AdventureController controller;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final complete = controller.isTodayAdventureComplete;
+    final stickerCount = controller.activityProgress.earnedStickers.length;
+    return Card(
+      color: Theme.of(context).colorScheme.tertiaryContainer,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: Theme.of(context).colorScheme.tertiary,
+                foregroundColor: Theme.of(context).colorScheme.onTertiary,
+                child: Icon(
+                  complete ? Icons.check_rounded : Icons.auto_awesome_rounded,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Today’s mini adventure',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      complete
+                          ? 'Adventure complete! You can play it again anytime.'
+                          : 'Three playful rounds and a new sticker are waiting.',
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '$stickerCount of 153 stickers found',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Icon(Icons.arrow_forward_rounded),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

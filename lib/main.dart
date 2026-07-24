@@ -11,9 +11,11 @@ import 'data/sqlite_user_repository.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final databasePath = await ContentStorage().prepareActiveDatabase();
+  final userRepository = SqliteUserRepository();
   final controller = AdventureController(
     referenceRepository: SqliteReferenceRepository(databasePath),
-    userRepository: SqliteUserRepository(),
+    userRepository: userRepository,
+    activityRepository: userRepository,
     updateService: BundledUpdateService(),
     encounterGuideRepository: AssetEncounterGuideRepository(),
   );
