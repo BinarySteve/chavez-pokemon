@@ -1,5 +1,6 @@
 import 'models/collection_state.dart';
 import 'models/encounter_guide.dart';
+import 'models/activity_progress.dart';
 import 'models/pokemon_species.dart';
 import 'models/trainer_profile.dart';
 
@@ -25,6 +26,14 @@ abstract interface class UserRepository {
 
 abstract interface class EncounterGuideRepository {
   Future<EncounterGuide> load();
+}
+
+abstract interface class ActivityRepository {
+  Future<ActivityProgress> loadActivityProgress();
+
+  Future<ActivityProgress> completeDailyAdventure(
+    ActivityCompletion completion,
+  );
 }
 
 enum UpdateCheckState { disabled, checking, current, updateAvailable, failed }
