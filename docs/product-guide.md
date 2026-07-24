@@ -105,12 +105,34 @@ evolution-only availability. Version-exclusive encounters are labeled
 explicitly. If neither caught nor catchable helpers match, the guide reassures
 the child and falls back to useful move types.
 
+### Adventure Camp
+
+Adventure Camp adds a short, replayable activity loop without changing the
+four main destinations. The Home card opens:
+
+- **Today’s Adventure** — Who’s That Pokémon?, Type Power!, and Evolution
+  Trail; finishing all three rounds earns one new sticker
+- **Free Play** — unlimited practice adventures that never alter rewards
+- **Sticker Scrapbook** — 153 Let’s Go-compatible slots in National Dex order
+
+Answers receive immediate friendly explanations. A wrong answer never reduces
+the reward, and there are no scores, timers, streaks, currencies, missed-day
+warnings, ads, or purchases. Daily questions use the local calendar date and
+stay the same when replayed. Partner, Caught, and Favorite Pokémon are
+preferred where a valid question can use them.
+
+Earned stickers show artwork and open the existing Pokémon detail page. Locked
+stickers remain mysteries. If a future reference-data version temporarily
+omits an earned species, the app retains its sticker record and shows an
+unavailable placeholder rather than deleting progress.
+
 ## Interaction and accessibility
 
 - tapping outside an input dismisses keyboard focus
 - layouts adapt between phone navigation bars and tablet navigation rails
-- onboarding, Pokédex, Collection, expanded Gym guidance, Pokémon details, and
-  form sheets are tested at 200% text scale on phone and tablet viewports
+- onboarding, Pokédex, Collection, expanded Gym guidance, Pokémon details,
+  form sheets, mini adventures, and the Sticker Scrapbook are tested at 200%
+  text scale on phone and tablet viewports
 - lists and helper choices use natural-height or wrapping layouts at large text
 - artwork and controls include semantic labels
 - collection and form controls use large touch targets

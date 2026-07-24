@@ -11,6 +11,7 @@ class MiniAdventureScreen extends StatefulWidget {
     required this.adventure,
     required this.wasCompleted,
     required this.onOpenPokemon,
+    required this.onOpenScrapbook,
     super.key,
   });
 
@@ -18,6 +19,7 @@ class MiniAdventureScreen extends StatefulWidget {
   final MiniAdventure adventure;
   final bool wasCompleted;
   final ValueChanged<PokemonSpecies> onOpenPokemon;
+  final VoidCallback onOpenScrapbook;
 
   @override
   State<MiniAdventureScreen> createState() => _MiniAdventureScreenState();
@@ -86,6 +88,7 @@ class _MiniAdventureScreenState extends State<MiniAdventureScreen> {
                   adventure: widget.adventure,
                   wasCompleted: widget.wasCompleted,
                   onOpenPokemon: widget.onOpenPokemon,
+                  onOpenScrapbook: widget.onOpenScrapbook,
                 )
               : _RoundView(
                   key: ValueKey(_roundIndex),
@@ -368,12 +371,14 @@ class _CompletionView extends StatelessWidget {
     required this.adventure,
     required this.wasCompleted,
     required this.onOpenPokemon,
+    required this.onOpenScrapbook,
     super.key,
   });
 
   final MiniAdventure adventure;
   final bool wasCompleted;
   final ValueChanged<PokemonSpecies> onOpenPokemon;
+  final VoidCallback onOpenScrapbook;
 
   @override
   Widget build(BuildContext context) {
@@ -422,6 +427,14 @@ class _CompletionView extends StatelessWidget {
                       onPressed: () => onOpenPokemon(reward),
                       icon: const Icon(Icons.menu_book_rounded),
                       label: Text('Meet ${reward.name}'),
+                    ),
+                  ],
+                  if (adventure.isDaily) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: onOpenScrapbook,
+                      icon: const Icon(Icons.auto_stories_rounded),
+                      label: const Text('Open Sticker Scrapbook'),
                     ),
                   ],
                   const SizedBox(height: 18),

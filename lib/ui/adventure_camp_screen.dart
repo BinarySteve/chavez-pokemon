@@ -4,6 +4,7 @@ import '../application/adventure_controller.dart';
 import '../domain/models/mini_adventure.dart';
 import '../domain/models/pokemon_species.dart';
 import 'mini_adventure_screen.dart';
+import 'sticker_scrapbook_screen.dart';
 
 class AdventureCampScreen extends StatelessWidget {
   const AdventureCampScreen({
@@ -26,6 +27,18 @@ class AdventureCampScreen extends StatelessWidget {
           controller: controller,
           adventure: adventure,
           wasCompleted: wasCompleted,
+          onOpenPokemon: onOpenPokemon,
+          onOpenScrapbook: () => _openScrapbook(context),
+        ),
+      ),
+    );
+  }
+
+  void _openScrapbook(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => StickerScrapbookScreen(
+          controller: controller,
           onOpenPokemon: onOpenPokemon,
         ),
       ),
@@ -76,6 +89,13 @@ class AdventureCampScreen extends StatelessWidget {
                           wasCompleted: false,
                         ),
                       ),
+                      const SizedBox(height: 14),
+                      _ScrapbookCard(
+                        controller: controller,
+                        onOpen: controller.isActivityReady
+                            ? () => _openScrapbook(context)
+                            : null,
+                      ),
                     ],
                   ),
                 ),
@@ -83,6 +103,46 @@ class AdventureCampScreen extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _ScrapbookCard extends StatelessWidget {
+  const _ScrapbookCard({required this.controller, required this.onOpen});
+
+  final AdventureController controller;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final found = controller.activityProgress.earnedStickers.length;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.auto_stories_rounded, size: 34),
+            const SizedBox(height: 12),
+            Text(
+              'Sticker Scrapbook',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              controller.isActivityReady
+                  ? '$found of 153 stickers found. Every page grows one adventure at a time.'
+                  : 'Sticker progress will appear when today’s activities are ready.',
+            ),
+            const SizedBox(height: 16),
+            FilledButton.tonalIcon(
+              onPressed: onOpen,
+              icon: const Icon(Icons.collections_bookmark_rounded),
+              label: const Text('Open scrapbook'),
+            ),
+          ],
+        ),
       ),
     );
   }

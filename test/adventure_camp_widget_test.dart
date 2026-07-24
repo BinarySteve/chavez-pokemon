@@ -8,12 +8,15 @@ import 'package:pokemon_adventure/domain/models/mini_adventure.dart';
 import 'package:pokemon_adventure/domain/models/pokemon_species.dart';
 import 'package:pokemon_adventure/domain/models/trainer_profile.dart';
 import 'package:pokemon_adventure/domain/repositories.dart';
+import 'package:pokemon_adventure/ui/sticker_scrapbook_screen.dart';
+import 'package:pokemon_adventure/ui/mini_adventure_screen.dart';
 
 void main() {
   testWidgets('daily adventure rewards completion after a gentle correction', (
     tester,
   ) async {
     _configurePhone(tester);
+    final semantics = tester.ensureSemantics();
     final activities = _ActivityRepositoryFake();
     final controller = _controller(activities);
 
@@ -54,6 +57,25 @@ void main() {
     );
     expect(controller.activityProgress.earnedStickers, hasLength(1));
     expect(activities.saveCalls, 1);
+
+    await tester.tap(find.text('Open Sticker Scrapbook'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sticker Scrapbook'), findsOneWidget);
+    expect(find.text('1 of 153 stickers found'), findsOneWidget);
+    expect(find.text(adventure.reward!.name), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(ValueKey('sticker-${adventure.reward!.id}')))
+          .label,
+      '${adventure.reward!.name} sticker collected',
+    );
+    await tester.tap(find.text(adventure.reward!.name));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('How do I battle ${adventure.reward!.name}?'),
+      findsOneWidget,
+    );
+    semantics.dispose();
   });
 
   testWidgets('Free Play never awards a sticker', (tester) async {
@@ -105,6 +127,86 @@ void main() {
     expect(find.text('Adventure complete!'), findsOneWidget);
     expect(controller.activityProgress.earnedStickers, hasLength(1));
   });
+
+  testWidgets('orphaned earned sticker remains visible and persisted', (
+    tester,
+  ) async {
+    _configurePhone(tester);
+    final earnedAt = DateTime.utc(2026, 7, 22);
+    final activities = _ActivityRepositoryFake(
+      progress: ActivityProgress(
+        completions: const {},
+        earnedStickers: {
+          151: EarnedSticker(
+            speciesId: 151,
+            sourceActivityId: 'daily-v1-2026-07-22',
+            earnedAt: earnedAt,
+          ),
+        },
+      ),
+    );
+    final controller = _controller(activities);
+    await tester.pumpWidget(AdventureApp(controller: controller));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Today’s mini adventure'));
+    await tester.pumpAndSettle();
+    final openScrapbook = find.widgetWithText(FilledButton, 'Open scrapbook');
+    await tester.ensureVisible(openScrapbook);
+    await tester.pumpAndSettle();
+    await tester.tap(openScrapbook);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('#0151'),
+      1000,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('Sticker unavailable'), findsOneWidget);
+    expect(find.text('Not in this data version'), findsOneWidget);
+    expect(controller.activityProgress.hasSticker(151), isTrue);
+  });
+
+  for (final size in [const Size(430, 932), const Size(1024, 768)]) {
+    testWidgets(
+      'mini adventure and scrapbook fit at 200% on ${size.width.toInt()}px',
+      (tester) async {
+        _configureView(tester, size, textScale: 2);
+        final activities = _ActivityRepositoryFake();
+        final controller = _controller(activities);
+        addTearDown(controller.dispose);
+        await controller.initialize();
+        await controller.loadActivityProgress();
+        final adventure = controller.buildDailyAdventure();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MiniAdventureScreen(
+              controller: controller,
+              adventure: adventure,
+              wasCompleted: false,
+              onOpenPokemon: (_) {},
+              onOpenScrapbook: () {},
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('Who’s That Pokémon?'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: StickerScrapbookScreen(
+              controller: controller,
+              onOpenPokemon: (_) {},
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('0 of 153 stickers found'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 }
 
 Future<void> _completeWithCorrectAnswers(
@@ -141,10 +243,16 @@ Future<void> _continue(WidgetTester tester, String label) async {
 }
 
 void _configurePhone(WidgetTester tester) {
-  tester.view.physicalSize = const Size(430, 932);
+  _configureView(tester, const Size(430, 932));
+}
+
+void _configureView(WidgetTester tester, Size size, {double textScale = 1}) {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 }
 
 AdventureController _controller(_ActivityRepositoryFake activities) {
@@ -226,7 +334,10 @@ class _UserRepositoryFake implements UserRepository {
 }
 
 class _ActivityRepositoryFake implements ActivityRepository {
-  ActivityProgress progress = ActivityProgress.empty;
+  _ActivityRepositoryFake({ActivityProgress? progress})
+    : progress = progress ?? ActivityProgress.empty;
+
+  ActivityProgress progress;
   bool failNextSave = false;
   int saveCalls = 0;
 

@@ -209,8 +209,9 @@ Those remain targeted schema-hardening work, not reasons to replace SQLite or
 the existing layered architecture.
 
 `assets/guides/lets_go_encounters.json` is not a SQLite schema extension. It is
-a separately versioned bundled guide, so dataset version 4, content schema 1,
-and trainer schema 1 remain unchanged. Its logical hash excludes no source
+a separately versioned bundled guide, so dataset version 4 and content schema
+1 remain unchanged. Trainer progress is independently versioned. Its logical
+hash excludes no source
 fields and is verified before promotion.
 
 ## Candidate review and future promotion

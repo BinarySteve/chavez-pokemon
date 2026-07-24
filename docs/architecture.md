@@ -141,3 +141,21 @@ and offline startup.
 changes. Screens route favorite, status, and automatic Seen writes through one
 failure-handling path. The repository is called first; only a successful write
 changes published collection state.
+
+## Adventure activities
+
+`MiniAdventureService` deterministically builds one daily three-round activity
+from the Let’s Go roster and seeded Free Play activities. It uses typed round
+models and existing species, matchup, evolution, partner, and Collection data;
+no activity content is fetched or generated at runtime.
+
+`ActivityRepository` is a separate interface implemented by
+`SqliteUserRepository`. Trainer schema 2 adds activity completions and earned
+stickers through an explicit v1-to-v2 migration. Completion and sticker award
+occur in one idempotent SQLite transaction. The controller publishes progress
+only after that transaction succeeds.
+
+Activity progress loads after core app readiness. Its failure does not block
+the Pokédex, Collection, Gyms, or Free Play. Adventure Camp and the lazy,
+natural-height Sticker Scrapbook are pushed routes, so the existing four
+primary destinations remain unchanged.

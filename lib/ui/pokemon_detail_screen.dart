@@ -418,9 +418,11 @@ class _EvolutionCard extends StatelessWidget {
                   color: Theme.of(context).colorScheme.tertiary,
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  'Evolution paths',
-                  style: Theme.of(context).textTheme.titleLarge,
+                Expanded(
+                  child: Text(
+                    'Evolution paths',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                 ),
               ],
             ),

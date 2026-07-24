@@ -72,13 +72,20 @@ Current coverage includes:
 - kid-friendly matchup labels
 - theme and type-badge contrast plus focused semantic labels
 - 200% text scaling on phone and tablet for onboarding, Pokédex, Collection,
-  expanded Gyms, Pokémon details, and form sheets
+  expanded Gyms, Pokémon details, form sheets, mini adventures, and the
+  Sticker Scrapbook
+- trainer schema 1-to-2 migration, non-destructive downgrade rejection,
+  migration rollback, atomic/idempotent activity completion, and sticker
+  persistence
+- deterministic daily activities, Free Play variation, Collection
+  personalization, unambiguous choices, gentle correction, save retry, daily
+  replay, local-date rollover, and orphaned sticker rendering
 - Android detail-route back and modal-sheet back behavior
 
 Not yet covered:
 
 - transactional content activation, interrupted copies, rollback, or recovery
-- trainer-database migrations, backup, or restore
+- trainer-database backup or restore
 - release-over-release installation and signing identity
 - representative-device startup and search performance
 

@@ -15,6 +15,8 @@ getting kid-friendly help with **Pokémon: Let’s Go, Pikachu!** and
 - All Pokémon and Let’s Go Pokédex scopes
 - all eight Let’s Go story Gym teams with opponent-specific caught helpers and
   pre-Gym walking encounter suggestions
+- Adventure Camp with daily mini adventures, no-pressure Free Play, and a
+  153-slot Sticker Scrapbook
 - local trainer profile, favorites, Seen, Caught, Shiny, and Want to Find
 - 1,225 bundled images and no runtime internet requirement
 

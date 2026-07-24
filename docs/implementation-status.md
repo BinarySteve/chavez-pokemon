@@ -2,6 +2,44 @@
 
 Verified against the repository on 2026-07-23.
 
+## Completed phase: Adventure Camp
+
+Purpose: add a calm, repeatable reason for a child to return without timers,
+scores, streak pressure, currency, advertising, or network services.
+
+Implemented behavior:
+
+- Home opens Adventure Camp without adding a fifth primary destination;
+- Today’s Adventure contains Who’s That Pokémon?, Type Power!, and Evolution
+  Trail, with friendly correction and a guaranteed completion reward;
+- daily generation and replay are deterministic by local civil date, while
+  Free Play varies without writing progress;
+- question selection stays inside the 153-species Let’s Go roster and gently
+  prefers the partner, Caught, and Favorite Pokémon;
+- one new sticker is selected by a deterministic first-unearned scan, and all
+  153 slots appear in a responsive, lazy Sticker Scrapbook;
+- completion and sticker award are persistence-first, atomic, idempotent, and
+  retryable; and
+- missing future reference IDs remain stored and render as unavailable earned
+  stickers instead of being deleted.
+
+Compatibility:
+
+- trainer schema advances from 1 to 2 through a tested incremental migration;
+- trainer profile and Collection tables/data remain unchanged;
+- dataset 4, content schema 1, encounter guide, manifest, reference DB, and
+  1,225 artwork files remain unchanged; and
+- no dependency, permission, data-pipeline output, runtime network path, audio,
+  analytics, or advertising is added.
+
+Completion evidence:
+
+- all 64 Flutter tests and all 24 pipeline tests pass;
+- Flutter analysis and formatting are clean;
+- Android debug and release APK assembly succeed, and the release APK adds no
+  Internet, storage, analytics, advertising, or location permission; and
+- protected bundled-content hashes and permission declarations are unchanged.
+
 ## Completed phase: progress-aware Gym recommendations
 
 Purpose: lead with Pokémon the child already owns, then offer a small,
@@ -38,7 +76,8 @@ Compatibility:
 
 Completion evidence:
 
-- all 44 Flutter tests and all 24 pipeline tests pass;
+- the progress-aware Gym tests remain part of the current 64 passing Flutter
+  tests, and all 24 pipeline tests pass;
 - Flutter analysis reports no issues;
 - snapshot r2 and the bundled guide validate against their pinned hashes and
   audited counts; and
@@ -256,8 +295,8 @@ sealed or immutable source snapshot.
   friendly Flutter error screen.
 - `BundledUpdateService` compares only the bundled manifest. It does not
   download or activate content.
-- Trainer database has schema version 1 but no explicit upgrade or downgrade
-  migration callbacks.
+- Trainer database now has an explicit v1-to-v2 migration and fail-closed
+  downgrade handling, but still has no backup or restore workflow.
 - Startup and search performance have no representative-device budget.
 
 ## Data-pipeline limits
@@ -290,6 +329,8 @@ sealed or immutable source snapshot.
 
 ## Next implementation boundary
 
-Next code phase is targeted reference-schema hardening after the frozen
-pipeline. Transactional content activation, homelab updates, and permanent APK
-signing remain separate later phases. Do not combine them into one migration.
+Stabilize and observe the first Adventure Camp pack before adding more reward
+systems. A later child-facing slice may add structured real-game collection
+quests. Targeted reference-schema hardening, transactional content activation,
+homelab updates, trainer backup/restore, and permanent APK signing remain
+separate technical phases.
